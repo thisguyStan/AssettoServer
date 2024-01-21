@@ -3,8 +3,6 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using System.Threading.Tasks;
-using AssettoServer.Server.Ai;
-using AssettoServer.Server.Ai.Splines;
 using AssettoServer.Server.Configuration;
 using AssettoServer.Server.Configuration.Extra;
 using AssettoServer.Shared.Model;
@@ -46,8 +44,8 @@ public partial class EntryCar : IEntryCar<ACTcpClient>
     public float NetworkDistanceSquared { get; internal set; }
     public int OutsideNetworkBubbleUpdateRateMs { get; internal set; }
 
-    internal long[] OtherCarsLastSentUpdateTime { get; }
-    internal EntryCar? TargetCar { get; set; }
+    public long[] OtherCarsLastSentUpdateTime { get; }
+    public EntryCar? TargetCar { get; set; }
     private long LastFallCheckTime{ get; set; }
 
     /// <summary>
@@ -85,7 +83,7 @@ public partial class EntryCar : IEntryCar<ACTcpClient>
         }
     }
         
-    public EntryCar(string model, string? skin, byte sessionId, Func<EntryCar, AiState> aiStateFactory, SessionManager sessionManager, ACServerConfiguration configuration, EntryCarManager entryCarManager, AiSpline? spline = null)
+    public EntryCar(string model, string? skin, byte sessionId, SessionManager sessionManager, ACServerConfiguration configuration, EntryCarManager entryCarManager)
     {
         Model = model;
         Skin = skin ?? "";
@@ -93,21 +91,16 @@ public partial class EntryCar : IEntryCar<ACTcpClient>
         _sessionManager = sessionManager;
         _configuration = configuration;
         _entryCarManager = entryCarManager;
-        _spline = spline;
-        _aiStateFactory = aiStateFactory;
         OtherCarsLastSentUpdateTime = new long[entryCarManager.EntryCars.Length];
-
+        
         AiPakSequenceIds = new byte[entryCarManager.EntryCars.Length];
-        LastSeenAiState = new AiState[entryCarManager.EntryCars.Length];
         LastSeenAiSpawn = new byte[entryCarManager.EntryCars.Length];
-            
+
         Logger = new LoggerConfiguration()
             .MinimumLevel.Debug()
             .Enrich.With(new EntryCarLogEventEnricher(this))
             .WriteTo.Logger(Log.Logger)
             .CreateLogger();
-            
-        AiInit();
     }
 
     internal void Reset()
@@ -202,59 +195,20 @@ public partial class EntryCar : IEntryCar<ACTcpClient>
         Status.NormalizedPosition = positionUpdate.NormalizedPosition;
     }
 
-    public bool GetPositionUpdateForCar(EntryCar toCar, out PositionUpdateOut positionUpdateOut)
+    public virtual bool GetPositionUpdateForCar(EntryCar toCar, out PositionUpdateOut positionUpdateOut)
     {
         CarStatus targetCarStatus;
         var toTargetCar = toCar.TargetCar;
         if (toTargetCar != null)
         {
-            if (toTargetCar.AiControlled && toTargetCar.LastSeenAiState[toCar.SessionId] != null)
-            {
-                targetCarStatus = toTargetCar.LastSeenAiState[toCar.SessionId]!.Status;
-            }
-            else
-            {
-                targetCarStatus = toTargetCar.Status;
-            }
+            targetCarStatus = toTargetCar.Status;
         }
         else
         {
             targetCarStatus = toCar.Status;
         }
 
-        CarStatus status;
-        if (AiControlled)
-        {
-            var aiState = GetBestStateForPlayer(targetCarStatus);
-
-            if (aiState == null)
-            {
-                positionUpdateOut = default;
-                return false;
-            }
-
-            if (LastSeenAiState[toCar.SessionId] != aiState
-                || LastSeenAiSpawn[toCar.SessionId] != aiState.SpawnCounter)
-            {
-                LastSeenAiState[toCar.SessionId] = aiState;
-                LastSeenAiSpawn[toCar.SessionId] = aiState.SpawnCounter;
-
-                if (AiEnableColorChanges)
-                {
-                    toCar.Client?.SendPacket(new CSPCarColorUpdate
-                    {
-                        SessionId = SessionId,
-                        Color = aiState.Color
-                    });
-                }
-            }
-
-            status = aiState.Status;
-        }
-        else
-        {
-            status = Status;
-        }
+        CarStatus status = Status;
 
         float distanceSquared = Vector3.DistanceSquared(status.Position, targetCarStatus.Position);
         if (TargetCar != null || distanceSquared > NetworkDistanceSquared)

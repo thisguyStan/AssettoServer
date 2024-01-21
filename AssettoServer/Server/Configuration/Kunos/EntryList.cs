@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using AssettoServer.Server;
 using AssettoServer.Utils;
 using IniParser;
 using IniParser.Model;
@@ -22,7 +23,7 @@ public class EntryList
         [IniField("DRIVERNAME")] public string? DriverName { get; init; }
         [IniField("TEAM")] public string? Team { get; init; }
         [IniField("GUID")] public string Guid { get; init; } = "";
-        [IniField("AI")] public AiMode AiMode { get; internal set; } = AiMode.None;
+        [IniField("AI")] public AiMode AiMode { get; set; } = AiMode.None;
     }
     
     public static EntryList FromFile(string path)

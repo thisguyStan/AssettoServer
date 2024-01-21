@@ -18,7 +18,7 @@ namespace AssettoServer.Server;
 public class EntryCarManager
 {
     public EntryCar[] EntryCars { get; private set; } = Array.Empty<EntryCar>();
-    internal ConcurrentDictionary<int, EntryCar> ConnectedCars { get; } = new();
+    public ConcurrentDictionary<int, EntryCar> ConnectedCars { get; } = new();
 
     private readonly ACServerConfiguration _configuration;
     private readonly IBlacklistService _blacklist;
@@ -224,7 +224,7 @@ public class EntryCarManager
         {
             var entry = _configuration.EntryList.Cars[i];
             var driverOptions = CSPDriverOptions.Parse(entry.Skin);
-            var aiMode = _configuration.Extra.EnableAi ? entry.AiMode : AiMode.None;
+            var aiMode = entry.AiMode;
 
             EntryCars[i] = _entryCarFactory(entry.Model, entry.Skin, (byte)i);
             EntryCars[i].SpectatorMode = entry.SpectatorMode;

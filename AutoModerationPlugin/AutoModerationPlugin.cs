@@ -1,7 +1,6 @@
 ﻿using System.Numerics;
 using System.Reflection;
 using AssettoServer.Server;
-using AssettoServer.Server.Ai.Splines;
 using AssettoServer.Server.Configuration;
 using AssettoServer.Server.Plugin;
 using AssettoServer.Server.Weather;
@@ -12,6 +11,8 @@ using AutoModerationPlugin.Packets;
 using JetBrains.Annotations;
 using Microsoft.Extensions.Hosting;
 using Serilog;
+using TrafficPlugin.Ai.Splines;
+using TrafficPlugin.Configuration;
 
 namespace AutoModerationPlugin;
 
@@ -23,6 +24,7 @@ public class AutoModerationPlugin : CriticalBackgroundService, IAssettoServerAut
     private readonly List<EntryCarAutoModeration> _instances = new();
 
     private readonly ACServerConfiguration _serverConfiguration;
+    private readonly AiParams _aiParams;
     private readonly AutoModerationConfiguration _configuration;
     private readonly EntryCarManager _entryCarManager;
     private readonly WeatherManager _weatherManager;
@@ -37,14 +39,14 @@ public class AutoModerationPlugin : CriticalBackgroundService, IAssettoServerAut
         ACServerConfiguration serverConfiguration,
         CSPServerScriptProvider scriptProvider,
         Func<EntryCar, EntryCarAutoModeration> entryCarAutoModerationFactory,
-        IHostApplicationLifetime applicationLifetime,
-        AiSpline? aiSpline = null) : base(applicationLifetime)
+        IHostApplicationLifetime applicationLifetime, AiParams aiParams, AiSpline? aiSpline = null) : base(applicationLifetime)
     {
         _configuration = configuration;
         _entryCarManager = entryCarManager;
         _weatherManager = weatherManager;
         _serverConfiguration = serverConfiguration;
         _entryCarAutoModerationFactory = entryCarAutoModerationFactory;
+        _aiParams = aiParams;
         _aiSpline = aiSpline;
 
         if (aiSpline == null)
@@ -61,7 +63,7 @@ public class AutoModerationPlugin : CriticalBackgroundService, IAssettoServerAut
         }
         else 
         {
-            _laneRadiusSquared = MathF.Pow(_serverConfiguration.Extra.AiParams.LaneWidthMeters / 2.0f * 1.25f, 2);
+            _laneRadiusSquared = MathF.Pow(_aiParams.LaneWidthMeters / 2.0f * 1.25f, 2);
         }
         
         if (_serverConfiguration.Extra.EnableClientMessages)

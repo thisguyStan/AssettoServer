@@ -14,7 +14,7 @@ using YamlDotNet.Serialization;
 
 namespace AssettoServer.Server.Configuration;
 
-internal class ConfigurationSchemaGenerator : JsonSchemaGenerator, ISchemaProcessor
+public class ConfigurationSchemaGenerator : JsonSchemaGenerator, ISchemaProcessor
 {
     private const string SchemaBasePath = "cfg/schemas";
 

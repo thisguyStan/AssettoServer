@@ -837,14 +837,16 @@ public class ACTcpClient : IClient
                 if (car != EntryCar)
                     batched.Packets.Add(new TyreCompoundUpdate { SessionId = car.SessionId, CompoundName = car.Status.CurrentTyreCompound });
 
-                if (_configuration.Extra.AiParams.HideAiCars)
+                // if (_configuration.Extra.AiParams.HideAiCars)
+                // {
+                batched.Packets.Add(new CSPCarVisibilityUpdate
                 {
-                    batched.Packets.Add(new CSPCarVisibilityUpdate
-                    {
-                        SessionId = car.SessionId,
-                        Visible = car.AiControlled ? CSPCarVisibility.Invisible : CSPCarVisibility.Visible
-                    });
-                }
+                    SessionId = car.SessionId,
+                    // This shouldn't be a problem as Visibility is changed when AI Control is set *after* initialization
+                    // Visible = car.AiControlled ? CSPCarVisibility.Invisible : CSPCarVisibility.Visible
+                    Visible = CSPCarVisibility.Visible
+                });
+                // }
             }
 
             // TODO: sent DRS zones
