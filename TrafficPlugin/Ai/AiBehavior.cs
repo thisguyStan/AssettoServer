@@ -75,6 +75,12 @@ public class AiBehavior : CriticalBackgroundService, IAssettoServerAutostart
     {
         if (args.TargetCar?.AiControlled == true)
         {
+            // TODO this is fucky
+            if (!sender.EntryCar.GetType().IsAssignableTo(typeof(EntryCarAi)))
+            {
+                Log.Error("Couldn't cast EntryCar to EntryCarAI in OnCollision");
+                return;
+            }
             var targetAiState = ((EntryCarAi) args.TargetCar).GetClosestAiState(sender.EntryCar.Status.Position);
             if (targetAiState.AiState != null && targetAiState.DistanceSquared < 25 * 25)
             {
@@ -85,7 +91,14 @@ public class AiBehavior : CriticalBackgroundService, IAssettoServerAutostart
 
     private void OnClientChecksumPassed(ACTcpClient sender, EventArgs args)
     {
+        // TODO this is fucky
+        if (!sender.EntryCar.GetType().IsAssignableTo(typeof(EntryCarAi)))
+        {
+            Log.Error("Couldn't cast EntryCar to EntryCarAI in OnClientChecksumPassed");
+            return;
+        }
         ((EntryCarAi) sender.EntryCar).SetAiControl(false);
+        
         AdjustOverbooking();
     }
 
@@ -104,6 +117,12 @@ public class AiBehavior : CriticalBackgroundService, IAssettoServerAutostart
                     var entryCar = _entryCarManager.EntryCars[i];
                     if (entryCar.AiControlled)
                     {
+                        // TODO this is fucky
+                        if (!entryCar.GetType().IsAssignableTo(typeof(EntryCarAi)))
+                        {
+                            Log.Error("Couldn't cast EntryCar to EntryCarAI in ObstacleDetectionAsync");
+                            continue;
+                        }
                         ((EntryCarAi) entryCar).AiObstacleDetection();
                     }
                 }
@@ -141,6 +160,12 @@ public class AiBehavior : CriticalBackgroundService, IAssettoServerAutostart
             {
                 if (!car.AiControlled) continue;
                 
+                // TODO this is fucky
+                if (!car.GetType().IsAssignableTo(typeof(EntryCarAi)))
+                {
+                    Log.Error("Couldn't cast EntryCar to EntryCarAI in SendDebugPackets");
+                    continue;
+                }
                 var (aiState, _) = ((EntryCarAi) car).GetClosestAiState(player.Status.Position);
                 if (aiState == null) continue;
 
@@ -198,6 +223,13 @@ public class AiBehavior : CriticalBackgroundService, IAssettoServerAutostart
             }
             else if (entryCar.AiControlled)
             {
+                // TODO this is fucky
+                if (!entryCar.GetType().IsAssignableTo(typeof(EntryCarAi)))
+                {
+                    Log.Error("Couldn't cast EntryCar to EntryCarAI in Update");
+                    return;
+                }
+                
                 ((EntryCarAi) entryCar).RemoveUnsafeStates();
                 ((EntryCarAi) entryCar).GetInitializedStates(_initializedAiStates, _uninitializedAiStates);
             }
@@ -349,6 +381,12 @@ public class AiBehavior : CriticalBackgroundService, IAssettoServerAutostart
     {
         if (sender.EntryCar.AiMode != AiMode.None)
         {
+            // TODO this is fucky
+            if (!sender.EntryCar.GetType().IsAssignableTo(typeof(EntryCarAi)))
+            {
+                Log.Error("Couldn't cast EntryCar to EntryCarAI in OnClientDisconnected");
+                return;
+            }
             ((EntryCarAi) sender.EntryCar).SetAiControl(true);
             AdjustOverbooking();
         }
@@ -380,6 +418,12 @@ public class AiBehavior : CriticalBackgroundService, IAssettoServerAutostart
 
         for (var i = 0; i < _entryCarManager.EntryCars.Length; i++)
         {
+            // TODO this is fucky
+            if (!_entryCarManager.EntryCars[i].GetType().IsAssignableTo(typeof(EntryCarAi)))
+            {
+                Log.Error("Couldn't cast EntryCar to EntryCarAI in IsPositionSafe");
+                continue;
+            }
             var entryCar = (EntryCarAi) _entryCarManager.EntryCars[i];
             if (entryCar.AiControlled && !entryCar.IsPositionSafe(pointId))
             {

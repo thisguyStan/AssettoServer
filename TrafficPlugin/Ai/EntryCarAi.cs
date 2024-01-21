@@ -2,6 +2,7 @@
 using System.Numerics;
 using AssettoServer.Server;
 using AssettoServer.Server.Configuration;
+using AssettoServer.Server.Weather;
 using AssettoServer.Shared.Model;
 using AssettoServer.Shared.Network.Packets.Outgoing;
 using AssettoServer.Shared.Network.Packets.Shared;
@@ -38,8 +39,10 @@ public class EntryCarAi : EntryCar
     private readonly List<AiState> _aiStates = new List<AiState>();
     private readonly ReaderWriterLockSlim _aiStatesLock = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
     
-    private readonly Func<EntryCar, AiState> _aiStateFactory;
-    private readonly AiSpline? _spline;
+    public new delegate EntryCarAi Factory(string model, string? skin, byte sessionId);
+    
+    private readonly Func<EntryCarAi, AiState> _aiStateFactory;
+    private readonly AiSpline _spline;
     private readonly AiParams _aiParams;
     private readonly ACServerConfiguration _configuration;
     private readonly EntryCarManager _entryCarManager;
@@ -48,12 +51,12 @@ public class EntryCarAi : EntryCar
     public EntryCarAi(string model, 
         string? skin, 
         byte sessionId, 
-        Func<EntryCar, AiState> aiStateFactory, 
+        Func<EntryCarAi, AiState> aiStateFactory, 
         SessionManager sessionManager, 
         ACServerConfiguration configuration, 
         AiParams aiParams,
         EntryCarManager entryCarManager, 
-        AiSpline? spline = null) : base(model, skin, sessionId, sessionManager, configuration, entryCarManager)
+        AiSpline spline) : base(model, skin, sessionId, sessionManager, configuration, entryCarManager)
     {
         _aiParams = aiParams;
         _configuration = configuration;
@@ -67,7 +70,6 @@ public class EntryCarAi : EntryCar
             
         AiInit();
     }
-
     
     private void AiInit()
     {

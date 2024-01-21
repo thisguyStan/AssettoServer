@@ -138,38 +138,14 @@ public partial class AiParams : ObservableObject, IValidateConfiguration<AiParam
     [YamlIgnore] public int IgnoreObstaclesAfterMilliseconds => IgnoreObstaclesAfterSeconds * 1000;
     [YamlIgnore] public int AiBehaviorUpdateIntervalMilliseconds => 1000 / AiBehaviorUpdateIntervalHz;
 
-
-    public AiParams(ACServerConfiguration configuration)
+    public AiParams()
     {
-        ApplyConfigurationFixes(configuration);
+        WriteReferenceConfig();
     }
-    public AiParams() { }
     
-    private void ApplyConfigurationFixes(ACServerConfiguration configuration)
-    {
-        if (AutoAssignTrafficCars)
-        // if (Extra is { EnableAi: true, AiParams.AutoAssignTrafficCars: true })
-        {
-            foreach (var entry in configuration.EntryList.Cars)
-            {
-                if (entry.Model.Contains("traffic"))
-                {
-                    entry.AiMode = AiMode.Fixed;
-                }
-            }
-        }
-
-        if (AiPerPlayerTargetCount == 0)
-        {
-            AiPerPlayerTargetCount = configuration.EntryList.Cars.Count(c => c.AiMode != AiMode.None);
-        }
-
-        if (MaxAiTargetCount == 0)
-        {
-            MaxAiTargetCount = configuration.EntryList.Cars.Count(c => c.AiMode == AiMode.None) * AiPerPlayerTargetCount;
-        }
-    }
-    public static void WriteReferenceConfig()
+    public AiParams(bool skipReference) { }
+    
+    private static void WriteReferenceConfig()
     {
         const string baseFolder = "cfg";
         var schemaPath = Path.Join(baseFolder, "schemas", "plugin_traffic_cfg.schema.json");
@@ -187,7 +163,7 @@ public partial class AiParams : ObservableObject, IValidateConfiguration<AiParam
             ConfigurationSchemaGenerator.WriteModeLine(writer, baseFolder, schemaPath);
             writer.WriteLine($"# AssettoServer {AssemblyHelper.GetAssemblyInformationalVersion()} Reference Configuration");
             writer.WriteLine("# This file serves as an overview of all possible options with their default values.");
-            writer.WriteLine("# It is NOT read by the server - edit extra_cfg.yml instead!");
+            writer.WriteLine("# It is NOT read by the server - edit plugin_traffic_cfg.yml instead!");
             writer.WriteLine();
 
             ReferenceConfiguration.ToStream(writer, true);
@@ -197,7 +173,7 @@ public partial class AiParams : ObservableObject, IValidateConfiguration<AiParam
         info.IsReadOnly = true;
     }
 
-    public static readonly AiParams ReferenceConfiguration = new()
+    public static readonly AiParams ReferenceConfiguration = new(true)
     {
         CarSpecificOverrides = [
             new CarSpecificOverrides

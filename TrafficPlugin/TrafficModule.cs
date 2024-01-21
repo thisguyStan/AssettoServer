@@ -12,6 +12,8 @@ public class TrafficModule : AssettoServerModule<AiParams>
 {
     protected override void Load(ContainerBuilder builder)
     {
+        builder.RegisterType<AiParamsFixer>().AsSelf().SingleInstance();
+        
         builder.RegisterType<AiState>().AsSelf();
 
         builder.RegisterType<AiBehavior>().AsSelf().As<IAssettoServerAutostart>().SingleInstance();

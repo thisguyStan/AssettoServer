@@ -44,7 +44,7 @@ public class AiState
     public Color Color { get; private set; }
     public byte SpawnCounter { get; private set; }
     public float ClosestAiObstacleDistance { get; private set; }
-    public EntryCarAi EntryCar { get; }
+    private EntryCarAi EntryCar { get; }
 
     private const float WalkingSpeed = 10 / 3.6f;
 
@@ -96,9 +96,9 @@ public class AiState
         Color.FromArgb(18, 46, 43)
     ];
 
-    public AiState(EntryCar entryCar, SessionManager sessionManager, WeatherManager weatherManager, ACServerConfiguration configuration, AiParams aiParams, EntryCarManager entryCarManager, AiSpline spline)
+    public AiState(EntryCarAi entryCar, SessionManager sessionManager, WeatherManager weatherManager, ACServerConfiguration configuration, AiParams aiParams, EntryCarManager entryCarManager, AiSpline spline)
     {
-        EntryCar = (EntryCarAi) entryCar;
+        EntryCar = entryCar;
         _sessionManager = sessionManager;
         _weatherManager = weatherManager;
         _configuration = configuration;

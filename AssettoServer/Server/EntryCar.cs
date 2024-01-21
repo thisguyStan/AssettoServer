@@ -5,6 +5,7 @@ using System.Numerics;
 using System.Threading.Tasks;
 using AssettoServer.Server.Configuration;
 using AssettoServer.Server.Configuration.Extra;
+using AssettoServer.Server.Weather;
 using AssettoServer.Shared.Model;
 using AssettoServer.Shared.Network.Packets.Incoming;
 using AssettoServer.Shared.Network.Packets.Outgoing;
@@ -64,6 +65,9 @@ public partial class EntryCar : IEntryCar<ACTcpClient>
     private readonly EntryCarManager _entryCarManager;
     private readonly SessionManager _sessionManager;
 
+    public (ACServerConfiguration, EntryCarManager, SessionManager) GetDependencies =>
+        (_configuration, _entryCarManager, _sessionManager);
+    
     public ILogger Logger { get; }
 
     public class EntryCarLogEventEnricher : ILogEventEnricher
