@@ -8,7 +8,7 @@ public class AiUpdater
     private readonly EntryCarManager _entryCarManager;
 
     public AiUpdater(EntryCarManager entryCarManager, 
-        EntryCarAi.Factory entryCarFactory,
+        EntryCarAi.Factory entryCarAiFactory,
         ACServer server)
     {
         _entryCarManager = entryCarManager;
@@ -18,7 +18,7 @@ public class AiUpdater
             if (_entryCarManager.EntryCars[i].AiMode != AiMode.None)
             {
                 // TODO this is fucky
-                _entryCarManager.EntryCars[i] = entryCarFactory(_entryCarManager.EntryCars[i].Model,
+                _entryCarManager.EntryCars[i] = entryCarAiFactory(_entryCarManager.EntryCars[i].Model,
                     _entryCarManager.EntryCars[i].Skin, 
                     _entryCarManager.EntryCars[i].SessionId);
             }
