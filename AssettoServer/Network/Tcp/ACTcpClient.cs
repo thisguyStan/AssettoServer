@@ -590,14 +590,12 @@ public class ACTcpClient : IClient
         if (currentTime - LastChatTime < 1000)
             return;
         LastChatTime = currentTime;
-
-        if (_configuration.Extra.AfkKickBehavior == AfkKickBehavior.PlayerInput)
-        {
-            EntryCar.SetActive();
-        }
+        EntryCar.SetActive();
 
         ChatMessage chatMessage = reader.ReadPacket<ChatMessage>();
         chatMessage.SessionId = SessionId;
+
+        if (string.IsNullOrWhiteSpace(chatMessage.Message)) return;
             
         Logger.Information("CHAT: {ClientName} ({SessionId}): {ChatMessage}", Name, SessionId, chatMessage.Message);
 
@@ -836,17 +834,18 @@ public class ACTcpClient : IClient
                 batched.Packets.Add(new MandatoryPitUpdate { MandatoryPit = car.Status.MandatoryPit, SessionId = car.SessionId });
                 if (car != EntryCar)
                     batched.Packets.Add(new TyreCompoundUpdate { SessionId = car.SessionId, CompoundName = car.Status.CurrentTyreCompound });
-
-                // if (_configuration.Extra.AiParams.HideAiCars)
-                // {
-                batched.Packets.Add(new CSPCarVisibilityUpdate
+            
+                // Either in here or in the if above
+                batched.Packets.Add(new BallastUpdate { SessionId = car.SessionId, BallastKg = car.Ballast, Restrictor = car.Restrictor });
+                
+                if (_configuration.Extra.AiParams.HideAiCars)
                 {
-                    SessionId = car.SessionId,
-                    // This shouldn't be a problem as Visibility is changed when AI Control is set *after* initialization
-                    // Visible = car.AiControlled ? CSPCarVisibility.Invisible : CSPCarVisibility.Visible
-                    Visible = CSPCarVisibility.Visible
-                });
-                // }
+                    batched.Packets.Add(new CSPCarVisibilityUpdate
+                    {
+                        SessionId = car.SessionId,
+                        Visible = car.AiControlled ? CSPCarVisibility.Invisible : CSPCarVisibility.Visible
+                    });
+                }
             }
 
             // TODO: sent DRS zones
