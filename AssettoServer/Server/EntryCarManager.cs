@@ -46,6 +46,10 @@ public class EntryCarManager
     /// Fires when a player has disconnected.
     /// </summary>
     public event EventHandler<ACTcpClient, EventArgs>? ClientDisconnected;
+    /// <summary>
+    /// Add packets to first update
+    /// </summary>
+    public event EventHandler<BatchedPacket>? FirstUpdate;
 
     public EntryCarManager(ACServerConfiguration configuration, EntryCar.Factory entryCarFactory, IBlacklistService blacklist, IAdminService adminService, Lazy<OpenSlotFilterChain> openSlotFilterChain)
     {
@@ -241,5 +245,10 @@ public class EntryCarManager
                 EntryCars[i].AllowedGuids = entry.Guid.Split(';').Select(ulong.Parse).ToList();
             }
         }
+    }
+
+    public void RunFirstUpdate(ACTcpClient client, BatchedPacket batchedPacket)
+    {
+        FirstUpdate?.Invoke(client, batchedPacket);
     }
 }

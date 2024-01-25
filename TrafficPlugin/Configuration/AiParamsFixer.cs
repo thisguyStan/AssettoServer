@@ -1,5 +1,7 @@
-﻿using AssettoServer.Server;
+﻿using AssettoServer.Network.Tcp;
+using AssettoServer.Server;
 using AssettoServer.Server.Configuration;
+using AssettoServer.Shared.Network.Packets.Outgoing;
 
 namespace TrafficPlugin.Configuration;
 
@@ -8,7 +10,7 @@ public class AiParamsFixer
     private readonly AiParams _aiParams;
     private readonly ACServerConfiguration _configuration;
 
-    public AiParamsFixer(AiParams aiParams, ACServerConfiguration configuration)
+    public AiParamsFixer(AiParams aiParams, ACServerConfiguration configuration, EntryCarManager entryCarManager)
     {
         _aiParams = aiParams;
         _configuration = configuration;
@@ -20,7 +22,6 @@ public class AiParamsFixer
     private void ApplyConfigurationFixes()
     {
         if (_aiParams.AutoAssignTrafficCars)
-            // if (Extra is { EnableAi: true, AiParams.AutoAssignTrafficCars: true })
         {
             foreach (var entry in _configuration.EntryList.Cars)
             {
@@ -40,5 +41,14 @@ public class AiParamsFixer
         {
             _aiParams.MaxAiTargetCount = _configuration.EntryList.Cars.Count(c => c.AiMode == AiMode.None) * _aiParams.AiPerPlayerTargetCount;
         }
+    }
+
+    private void FirstUpdate(ACTcpClient client, BatchedPacket batched)
+    {
+        batched.Packets.Add(new CSPCarVisibilityUpdate
+        {
+            SessionId = client.SessionId,
+            Visible = client.AiControlled ? CSPCarVisibility.Invisible : CSPCarVisibility.Visible
+        });
     }
 }

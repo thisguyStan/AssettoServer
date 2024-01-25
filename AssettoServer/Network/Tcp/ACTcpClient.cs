@@ -837,15 +837,8 @@ public class ACTcpClient : IClient
             
                 // Either in here or in the if above
                 batched.Packets.Add(new BallastUpdate { SessionId = car.SessionId, BallastKg = car.Ballast, Restrictor = car.Restrictor });
-                
-                if (_configuration.Extra.AiParams.HideAiCars)
-                {
-                    batched.Packets.Add(new CSPCarVisibilityUpdate
-                    {
-                        SessionId = car.SessionId,
-                        Visible = car.AiControlled ? CSPCarVisibility.Invisible : CSPCarVisibility.Visible
-                    });
-                }
+            
+                _entryCarManager.RunFirstUpdate(this, batched);
             }
 
             // TODO: sent DRS zones
