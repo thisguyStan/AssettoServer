@@ -37,7 +37,7 @@ public partial class EntryCar : IEntryCar<ACTcpClient>
     public string Model { get; }
     public string Skin { get; }
     public int SpectatorMode { get; internal set; }
-    public int Ballast { get; internal set; }
+    public float Ballast { get; internal set; }
     public int Restrictor { get; internal set; }
     public List<ulong> AllowedGuids { get; internal set; } = new();
         
@@ -118,7 +118,10 @@ public partial class EntryCar : IEntryCar<ACTcpClient>
         LastPingTime = 0;
         Ping = 0;
         ForceLights = false;
-        Status = new CarStatus();
+        Status = new CarStatus
+        {
+            P2PCount = (short)(_configuration.Extra.EnableUnlimitedP2P ? 99 : 15),
+        };
         TargetCar = null;
     }
 

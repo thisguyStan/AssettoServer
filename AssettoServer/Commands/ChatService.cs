@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Linq;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using AssettoServer.Commands.Contexts;
 using AssettoServer.Commands.TypeParsers;
@@ -8,34 +10,34 @@ using AssettoServer.Network.Tcp;
 using AssettoServer.Server;
 using AssettoServer.Server.Plugin;
 using AssettoServer.Shared.Network.Packets.Shared;
+using AssettoServer.Utils;
 using Qmmands;
 using Serilog;
 
 namespace AssettoServer.Commands;
 
-public class ChatService
+public partial class ChatService
 {
     private readonly EntryCarManager _entryCarManager;
     private readonly Func<ACTcpClient, ChatCommandContext> _chatContextFactory;
-    private readonly Func<RconClient, int, RconCommandContext> _rconContextFactory;
-    private readonly CommandService _commandService = new(new CommandServiceConfiguration
-    {
-        DefaultRunMode = RunMode.Parallel
-    });
+    private readonly CommandService _commandService;
 
     public event EventHandler<ACTcpClient, ChatEventArgs>? MessageReceived;
 
-    public ChatService(ACPluginLoader loader, Func<ACTcpClient, ChatCommandContext> chatContextFactory, ACClientTypeParser acClientTypeParser, EntryCarManager entryCarManager, Func<RconClient, int, RconCommandContext> rconContextFactory)
+    public ChatService(ACPluginLoader loader,
+        Func<ACTcpClient, ChatCommandContext> chatContextFactory,
+        ACClientTypeParser acClientTypeParser,
+        EntryCarManager entryCarManager,
+        CommandService commandService)
     {
         _chatContextFactory = chatContextFactory;
         _entryCarManager = entryCarManager;
-        _rconContextFactory = rconContextFactory;
+        _commandService = commandService;
         _entryCarManager.ClientConnected += OnClientConnected;
 
         _commandService.AddModules(Assembly.GetEntryAssembly());
         _commandService.AddTypeParser(acClientTypeParser);
         _commandService.CommandExecutionFailed += OnCommandExecutionFailed;
-        _commandService.CommandExecuted += OnCommandExecuted;
 
         foreach (var plugin in loader.LoadedPlugins)
         { 
@@ -48,42 +50,17 @@ public class ChatService
         sender.ChatMessageReceived += OnChatMessageReceived;
     }
 
-    private static ValueTask OnCommandExecuted(object? sender, CommandExecutedEventArgs args)
-    {
-        if (args.Context is RconCommandContext context)
-        {
-            context.SendRconResponse();
-        }
-
-        return ValueTask.CompletedTask;
-    }
-
     private async Task ProcessCommandAsync(ACTcpClient client, ChatMessage message)
-    {
-        var context = _chatContextFactory(client);
-        var result = await _commandService.ExecuteAsync(message.Message, context);
+        => await ProcessCommandAsync(_chatContextFactory(client), message.Message);
 
-        if (result is ChecksFailedResult checksFailedResult)
-            context.Reply(checksFailedResult.FailedChecks[0].Result.FailureReason);
-        else if (result is FailedResult failedResult)
-            context.Reply(failedResult.FailureReason);
-    }
-
-    public async Task ProcessCommandAsync(RconClient client, int requestId, string command)
+    public async Task ProcessCommandAsync(BaseCommandContext context, string command)
     {
-        var context = _rconContextFactory(client, requestId);
         var result = await _commandService.ExecuteAsync(command, context);
 
         if (result is ChecksFailedResult checksFailedResult)
-        {
             context.Reply(checksFailedResult.FailedChecks[0].Result.FailureReason);
-            context.SendRconResponse();
-        }
         else if (result is FailedResult failedResult)
-        {
             context.Reply(failedResult.FailureReason);
-            context.SendRconResponse();
-        }
     }
 
     private ValueTask OnCommandExecutionFailed(object? sender, CommandExecutionFailedEventArgs e)
@@ -104,9 +81,20 @@ public class ChatService
             var outArgs = new ChatEventArgs(args.ChatMessage.Message);
             MessageReceived?.Invoke(sender, outArgs);
 
-            if (!outArgs.Cancel)
+            if (outArgs.Cancel) return;
+            
+            var oldVersionMessage = new ChatMessage {
+                Message = args.ChatMessage.Message,
+                SessionId = args.ChatMessage.SessionId
+            };
+            oldVersionMessage.Message = EmoteRegex().Replace(oldVersionMessage.Message, "(emote)");
+                
+            foreach (var car in _entryCarManager.EntryCars)
             {
-                _entryCarManager.BroadcastPacket(args.ChatMessage);
+                if (car.Client is { HasSentFirstUpdate: true })
+                {
+                    car.Client?.SendPacket(car.Client?.CSPVersion < CSPVersion.V0_1_80_p389 ? oldVersionMessage : args.ChatMessage);
+                }
             }
         }
         else
@@ -116,4 +104,7 @@ public class ChatService
             _ = ProcessCommandAsync(sender, message);
         }
     }
+
+    [GeneratedRegex(@"(\p{Cs}){2}")]
+    private static partial Regex EmoteRegex();
 }

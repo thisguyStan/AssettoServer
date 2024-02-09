@@ -16,6 +16,7 @@ using AssettoServer.Server.Configuration.Serialization;
 using AssettoServer.Server.GeoParams;
 using AssettoServer.Server.OpenSlotFilters;
 using AssettoServer.Server.Plugin;
+using AssettoServer.Server.Steam;
 using AssettoServer.Server.TrackParams;
 using AssettoServer.Server.UserGroup;
 using AssettoServer.Server.Weather;
@@ -27,6 +28,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Prometheus;
+using Qmmands;
 
 namespace AssettoServer.Network.Http;
 
@@ -67,7 +69,6 @@ public class Startup
         builder.RegisterType<CSPServerScriptProvider>().AsSelf().SingleInstance();
         builder.RegisterType<CSPClientMessageTypeManager>().AsSelf().SingleInstance();
         builder.RegisterType<CSPClientMessageHandler>().AsSelf().SingleInstance();
-        builder.RegisterType<Steam>().As<IHostedService>().AsSelf().SingleInstance();
         builder.RegisterType<SessionManager>().AsSelf().SingleInstance();
         builder.RegisterType<EntryCarManager>().AsSelf().SingleInstance();
         builder.RegisterType<IpApiGeoParamsProvider>().As<IGeoParamsProvider>();
@@ -86,6 +87,7 @@ public class Startup
         builder.RegisterType<ACClientAuthentication>().AsSelf().SingleInstance().AutoActivate();
         builder.RegisterType<HttpInfoCache>().AsSelf().As<IAssettoServerAutostart>().SingleInstance();
         builder.RegisterType<DefaultCMContentProvider>().As<ICMContentProvider>().SingleInstance();
+        builder.RegisterType<CommandService>().AsSelf().SingleInstance();
 
         if (_configuration.Extra.EnableLegacyPluginInterface)
         {
@@ -94,6 +96,12 @@ public class Startup
             
         if (_configuration.Extra.UseSteamAuth)
         {
+#if DISABLE_STEAM
+            builder.RegisterType<WebApiSteam>().As<ISteam>().SingleInstance();
+#else
+            builder.RegisterType<NativeSteam>().As<IHostedService>().As<ISteam>().SingleInstance();
+#endif
+            builder.RegisterType<SteamManager>().AsSelf().SingleInstance().AutoActivate();
             builder.RegisterType<SteamSlotFilter>().As<IOpenSlotFilter>();
         }
 
@@ -172,5 +180,10 @@ public class Startup
             endpoints.MapMetrics();
             endpoints.MapControllers();
         });
+        
+        foreach (var plugin in _loader.LoadedPlugins)
+        {
+            plugin.Instance.Configure(app, env);
+        }
     }
 }

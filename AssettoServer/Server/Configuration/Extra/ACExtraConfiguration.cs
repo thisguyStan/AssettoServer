@@ -7,7 +7,6 @@ using JetBrains.Annotations;
 using YamlDotNet.Core;
 using YamlDotNet.Core.Events;
 using YamlDotNet.Serialization;
-using YamlDotNet.Serialization.ObjectGraphVisitors;
 
 #pragma warning disable CS0657
 
@@ -20,12 +19,17 @@ public partial class ACExtraConfiguration : ObservableObject
     public uint? MinimumCSPVersion { get; init; } = CSPVersion.V0_1_77;
     [YamlMember(Description = "Enable Steam ticket validation. Requires CSP 0.1.75+ and a recent version of Content Manager")]
     public bool UseSteamAuth { get; init; } = false;
+    [YamlMember(Description = "Steam Web API key for Steam authentication. You only need this on platforms that don't support Steam natively (e.g. ARM64)", DefaultValuesHandling = DefaultValuesHandling.OmitDefaults)]
+    public string? SteamWebApiKey { get; init; }
     [YamlMember(Description = "List of DLC App IDs that are required to join. Steam auth must be enabled. Possible values: https://steamdb.info/app/244210/dlc/")]
     public List<int> ValidateDlcOwnership { get; init; } = [];
     [YamlMember(Description = "Enable protection against cheats/hacks. 0 = No protection. 1 = Block all public cheats as of 2023-11-18 (ClientSecurityPlugin and CSP 0.2.0+ required)")]
     public int MandatoryClientSecurityLevel { get; init; }
     [YamlMember(Description = "Force headlights on for all cars")]
     public bool ForceLights { get; set; }
+
+    [YamlMember(Description = "Enable unlimited usage of Push-to-Pass")]
+    public bool EnableUnlimitedP2P { get; set; } = true;
     [YamlMember(Description = "Distance for network optimizations. Players outside of this range will send less updates to reduce network traffic")]
     public float NetworkBubbleDistance { get; init; } = 500;
     [YamlMember(Description = "Refresh rate for players outside of the network bubble")]
