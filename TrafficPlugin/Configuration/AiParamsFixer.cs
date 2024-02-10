@@ -16,6 +16,8 @@ public class AiParamsFixer
         _configuration = configuration;
 
         ApplyConfigurationFixes();
+
+        entryCarManager.FirstUpdate += FirstUpdate;
     }
     
     
@@ -43,12 +45,13 @@ public class AiParamsFixer
         }
     }
 
-    private void FirstUpdate(ACTcpClient client, BatchedPacket batched)
+    private void FirstUpdate(ACTcpClient client, FirstUpdateEventArgs args)
     {
-        batched.Packets.Add(new CSPCarVisibilityUpdate
+        
+        args.Batched.Packets.Add(new CSPCarVisibilityUpdate
         {
             SessionId = client.SessionId,
-            Visible = client.AiControlled ? CSPCarVisibility.Invisible : CSPCarVisibility.Visible
+            Visible = client.EntryCar.AiMode != AiMode.None ? CSPCarVisibility.Invisible : CSPCarVisibility.Visible
         });
     }
 }

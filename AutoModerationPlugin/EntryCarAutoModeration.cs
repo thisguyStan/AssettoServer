@@ -1,13 +1,14 @@
 ﻿using System.Numerics;
 using AssettoServer.Network.Tcp;
 using AssettoServer.Server;
-using AssettoServer.Server.Ai.Splines;
 using AssettoServer.Server.Configuration;
 using AssettoServer.Server.Weather;
 using AssettoServer.Shared.Network.Packets.Incoming;
 using AssettoServer.Shared.Network.Packets.Outgoing;
 using AssettoServer.Shared.Network.Packets.Shared;
 using AutoModerationPlugin.Packets;
+using TrafficPlugin.Ai.Splines;
+using TrafficPlugin.Configuration;
 
 namespace AutoModerationPlugin;
 
@@ -41,6 +42,7 @@ public class EntryCarAutoModeration
 
     private const double NauticalTwilight = -12.0 * Math.PI / 180.0;
     private readonly EntryCar _entryCar;
+    private readonly AiParams? _aiParams;
     private readonly AiSpline? _aiSpline;
     private readonly ACServerConfiguration _serverConfiguration;
     private readonly AutoModerationConfiguration _configuration;
@@ -55,6 +57,7 @@ public class EntryCarAutoModeration
         WeatherManager weatherManager,
         SessionManager sessionManager,
         ACServerConfiguration serverConfiguration,
+        AiParams? aiParams = null,
         AiSpline? aiSpline = null)
     {
         _entryCar = entryCar;
@@ -63,14 +66,16 @@ public class EntryCarAutoModeration
         _weatherManager = weatherManager;
         _sessionManager = sessionManager;
         _serverConfiguration = serverConfiguration;
+        _aiParams = aiParams;
         _aiSpline = aiSpline;
         _entryCar.ResetInvoked += OnResetInvoked;
         if (_configuration.AfkPenalty is { Enabled: true, Behavior: AfkPenaltyBehavior.MinimumSpeed })
         {
             _entryCar.PositionUpdateReceived += OnPositionUpdateReceived;
         }
-        
-        _laneRadiusSquared = MathF.Pow(_serverConfiguration.Extra.AiParams.LaneWidthMeters / 2.0f * 1.25f, 2);
+
+        if (_aiParams != null)
+            _laneRadiusSquared = MathF.Pow(_aiParams.LaneWidthMeters / 2.0f * 1.25f, 2);
     }
 
     private void OnPositionUpdateReceived(EntryCar sender, in PositionUpdateIn positionUpdate)
@@ -225,7 +230,7 @@ public class EntryCarAutoModeration
 
     private void UpdateWrongWayPenalty(ACTcpClient client)
     {
-        if (!_configuration.WrongWayPenalty.Enabled || _aiSpline == null) return;
+        if (!_configuration.WrongWayPenalty.Enabled || _aiSpline == null || _aiParams == null) return;
         
         if (CurrentSplinePointId >= 0
             && CurrentSplinePointDistanceSquared < _laneRadiusSquared
@@ -266,7 +271,7 @@ public class EntryCarAutoModeration
 
     private void UpdateBlockingRoadPenalty(ACTcpClient client)
     {
-        if (!_configuration.BlockingRoadPenalty.Enabled) return;
+        if (!_configuration.BlockingRoadPenalty.Enabled || _aiSpline == null || _aiParams == null) return;
         
         if (CurrentSplinePointDistanceSquared < _laneRadiusSquared
             && _entryCar.Status.Velocity.LengthSquared() < _configuration.BlockingRoadPenalty.MaximumSpeedMs * _configuration.BlockingRoadPenalty.MaximumSpeedMs)

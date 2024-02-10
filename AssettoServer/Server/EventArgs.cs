@@ -104,3 +104,9 @@ public class CarListResponseSendingEventArgs : EventArgs
         Packet = packet;
     }
 }
+
+public class FirstUpdateEventArgs : EventArgs
+{
+    public BatchedPacket Batched { get; init; }
+}
+

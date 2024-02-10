@@ -120,6 +120,8 @@ public partial class AiParams : ObservableObject, IValidateConfiguration<AiParam
 
     [YamlMember(Description = "Override some settings for specific car models")]
     public List<CarSpecificOverrides> CarSpecificOverrides { get; init; } = [];
+    [YamlMember(Description = "Dynamic (hourly) traffic density. List must have exactly 24 entries in the format [0.2, 0.5, 1, 0.7, ...]")]
+    public List<float>? HourlyTrafficDensity { get; set; }
 
     [YamlIgnore] public float PlayerRadiusSquared => PlayerRadiusMeters * PlayerRadiusMeters;
     [YamlIgnore] public float PlayerAfkTimeoutMilliseconds => PlayerAfkTimeoutSeconds * 1000;

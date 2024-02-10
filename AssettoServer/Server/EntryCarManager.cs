@@ -49,7 +49,7 @@ public class EntryCarManager
     /// <summary>
     /// Add packets to first update
     /// </summary>
-    public event EventHandler<BatchedPacket>? FirstUpdate;
+    public event EventHandler<ACTcpClient, FirstUpdateEventArgs>? FirstUpdate;
 
     public EntryCarManager(ACServerConfiguration configuration, EntryCar.Factory entryCarFactory, IBlacklistService blacklist, IAdminService adminService, Lazy<OpenSlotFilterChain> openSlotFilterChain)
     {
@@ -249,6 +249,11 @@ public class EntryCarManager
 
     public void RunFirstUpdate(ACTcpClient client, BatchedPacket batchedPacket)
     {
-        FirstUpdate?.Invoke(client, batchedPacket);
+        var args = new FirstUpdateEventArgs
+        {
+            Batched = batchedPacket
+        };
+        
+        FirstUpdate?.Invoke(client, args);
     }
 }

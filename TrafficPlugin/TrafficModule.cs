@@ -1,7 +1,9 @@
 ﻿using System.Numerics;
+using AssettoServer.Server.Configuration;
 using AssettoServer.Server.OpenSlotFilters;
 using AssettoServer.Server.Plugin;
 using Autofac;
+using Microsoft.Extensions.Hosting;
 using TrafficPlugin.Ai;
 using TrafficPlugin.Ai.OpenSlotFilters;
 using TrafficPlugin.Ai.Splines;
@@ -77,6 +79,11 @@ public class TrafficModule : AssettoServerModule<AiParams>
         builder.RegisterType<AiBehavior>().AsSelf().As<IAssettoServerAutostart>().SingleInstance();
         builder.RegisterType<AiUpdater>().AsSelf().SingleInstance().AutoActivate();
         builder.RegisterType<AiSlotFilter>().As<IOpenSlotFilter>();
+        
+        // if (_aiParams.HourlyTrafficDensity != null)
+        // {
+        //     builder.RegisterType<DynamicTrafficDensity>().As<IHostedService>().SingleInstance();
+        // }
         
         builder.RegisterType<AiSplineWriter>().AsSelf();
         builder.RegisterType<FastLaneParser>().AsSelf();
