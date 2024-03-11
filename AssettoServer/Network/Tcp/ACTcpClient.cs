@@ -797,8 +797,7 @@ public class ACTcpClient : IClient
                 }
             }
 
-            if (_configuration.DrsZones.Zones.Count > 0)
-                batched.Packets.Add(new DrsZonesUpdate { Zones = _configuration.DrsZones.Zones });
+            batched.Packets.Add(new DrsZonesUpdate { Zones = _configuration.DrsZones.Zones });
 
             batched.Packets.Add(CreateLapCompletedPacket(0xFF, 0, 0));
 

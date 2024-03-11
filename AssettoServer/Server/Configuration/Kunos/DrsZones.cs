@@ -10,7 +10,7 @@ namespace AssettoServer.Server.Configuration.Kunos;
 [UsedImplicitly(ImplicitUseKindFlags.Assign, ImplicitUseTargetFlags.WithMembers)]
 public class DrsZones
 {
-    [IniSection("ZONE")] public IReadOnlyList<DrsZone> Zones { get; init; } = new List<DrsZone>();
+    [IniSection("ZONE")] public IReadOnlyList<IDrsZone> Zones { get; init; } = new List<IDrsZone>();
     
     [UsedImplicitly(ImplicitUseKindFlags.Assign, ImplicitUseTargetFlags.WithMembers)]
     public class DrsZone : IDrsZone
