@@ -21,6 +21,7 @@ public class ServerConfiguration
     [IniField("SERVER", "CONFIG_TRACK")] public string TrackConfig { get; init; } = "";
     [IniField("SERVER", "SUN_ANGLE")] public float SunAngle { get; init; }
     [IniField("SERVER", "LOOP_MODE")] public bool Loop { get; init; }
+    [IniField("SERVER", "PICKUP_MODE_ENABLED")] public bool PickupModeEnabled { get; internal set; } = true;
     [IniField("SERVER", "TC_ALLOWED")] public byte TractionControlAllowed { get; init; }
     [IniField("SERVER", "ABS_ALLOWED")] public byte ABSAllowed { get; init; }
     [IniField("SERVER", "ALLOWED_TYRES_OUT")] public short AllowedTyresOutCount { get; init; }
@@ -53,6 +54,7 @@ public class ServerConfiguration
 
     [IniSection("WEATHER")] public IReadOnlyList<WeatherConfiguration> Weathers { get; init; } = new List<WeatherConfiguration>();
     [IniSection("DYNAMIC_TRACK")] public DynamicTrackConfiguration DynamicTrack { get; init; } = new();
+    [IniSection("BOOK")] public SessionConfiguration? Booking { get; init; }
     [IniSection("PRACTICE")] public SessionConfiguration? Practice { get; init; }
     [IniSection("QUALIFY")] public SessionConfiguration? Qualify { get; init; }
     [IniSection("RACE")] public SessionConfiguration? Race { get; init; }

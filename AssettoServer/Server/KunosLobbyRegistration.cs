@@ -113,13 +113,13 @@ public class KunosLobbyRegistration : CriticalBackgroundService
         queryParams["durations"] = string.Join(',', _configuration.Sessions.Select(s => s.IsTimedRace ? s.Time * 60 : s.Laps));
         queryParams["password"] = string.IsNullOrEmpty(cfg.Password) ? "0" : "1";
         queryParams["version"] = "202";
-        queryParams["pickup"] = "1";
+        queryParams["pickup"] = cfg.PickupModeEnabled ? "1" : "0";
         queryParams["autoclutch"] = cfg.AutoClutchAllowed ? "1" : "0";
         queryParams["abs"] = cfg.ABSAllowed.ToString();
         queryParams["tc"] = cfg.TractionControlAllowed.ToString();
         queryParams["stability"] = cfg.StabilityAllowed ? "1" : "0";
         queryParams["legal_tyres"] = cfg.LegalTyres;
-        queryParams["fixed_setup"] = "0";
+        queryParams["fixed_setup"] = _configuration.EntryList.Cars.Any(c => c.FixedSetup != null) ? "1" : "0";
         queryParams["timed"] = _configuration.Sessions.Any(s => s.IsTimedRace) ? "1" : "0";
         queryParams["extra"] = cfg.HasExtraLap ? "1" : "0";
         queryParams["pit"] = cfg.PitWindowEnd > 0 ? "1" : "0";

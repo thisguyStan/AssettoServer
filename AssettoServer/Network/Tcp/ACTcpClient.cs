@@ -796,8 +796,14 @@ public class ACTcpClient : IClient
                     });
                 }
             }
+            
+            if (EntryCar.FixedSetup != null 
+                && _configuration.Setups.Setups.TryGetValue(EntryCar.FixedSetup, out var setup))
+                batched.Packets.Add(new CarSetup { Setup = setup.Settings });
 
-            batched.Packets.Add(new DrsZonesUpdate { Zones = _configuration.DrsZones.Zones });
+            if (_configuration.DrsZones.Zones.Count > 0)
+                batched.Packets.Add(new DrsZonesUpdate { Zones = _configuration.DrsZones.Zones });
+            
 
             batched.Packets.Add(CreateLapCompletedPacket(0xFF, 0, 0));
 
