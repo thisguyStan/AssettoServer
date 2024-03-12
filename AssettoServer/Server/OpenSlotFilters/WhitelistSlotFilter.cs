@@ -15,7 +15,7 @@ public class WhitelistSlotFilter : OpenSlotFilterBase
         _whitelist = whitelist;
     }
 
-    public override async Task<AuthFailedResponse?> ShouldAcceptConnectionAsync(ACTcpClient client, HandshakePickupRequest request)
+    public override async Task<AuthFailedResponse?> ShouldAcceptConnectionAsync(ACTcpClient client, HandshakeRequest request)
     {
         if (!await _whitelist.IsWhitelistedAsync(request.Guid))
         {

@@ -36,7 +36,7 @@ public class WordFilter : OpenSlotFilterBase
         }
     }
     
-    public override Task<AuthFailedResponse?> ShouldAcceptConnectionAsync(ACTcpClient client, HandshakePickupRequest request)
+    public override Task<AuthFailedResponse?> ShouldAcceptConnectionAsync(ACTcpClient client, HandshakeRequest request)
     {
         if (_configuration.ProhibitedUsernamePatterns.Any(regex => Regex.Match(request.Name, regex, RegexOptions.IgnoreCase).Success))
         {

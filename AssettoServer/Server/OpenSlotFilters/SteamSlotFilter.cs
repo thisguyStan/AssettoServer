@@ -15,7 +15,7 @@ public class SteamSlotFilter : OpenSlotFilterBase
         _steam = steam;
     }
 
-    public override async Task<AuthFailedResponse?> ShouldAcceptConnectionAsync(ACTcpClient client, HandshakePickupRequest request)
+    public override async Task<AuthFailedResponse?> ShouldAcceptConnectionAsync(ACTcpClient client, HandshakeRequest request)
     {
         if (!await _steam.ValidateSessionTicketAsync(request.SessionTicket, request.Guid, client))
         {

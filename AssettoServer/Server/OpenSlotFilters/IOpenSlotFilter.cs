@@ -9,5 +9,5 @@ public interface IOpenSlotFilter
 {
     void SetNextFilter(IOpenSlotFilter next);
     bool IsSlotOpen(EntryCar entryCar, ulong guid);
-    Task<AuthFailedResponse?> ShouldAcceptConnectionAsync(ACTcpClient client, HandshakePickupRequest request);
+    Task<AuthFailedResponse?> ShouldAcceptConnectionAsync(ACTcpClient client, HandshakeRequest request);
 }

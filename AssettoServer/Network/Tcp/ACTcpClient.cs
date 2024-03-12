@@ -318,14 +318,14 @@ public class ACTcpClient : IClient
 
                 if (!HasStartedHandshake)
                 {
-                    HandshakePickupRequest handshakeRequest;
+                    HandshakeRequest handshakeRequest;
                     if (_configuration.Server.PickupModeEnabled)
                     {
-                        handshakeRequest = reader.ReadPacket<HandshakePickupRequest>();
+                        handshakeRequest = reader.ReadPacket<HandshakeRequest>();
                     }
                     else
                     {
-                        HandshakeRequest handshakeBookingRequest = reader.ReadPacket<HandshakeRequest>();
+                        HandshakeBookingRequest handshakeBookingRequest = reader.ReadPacket<HandshakeBookingRequest>();
 
                         // TODO the actual booking stuff
                         handshakeRequest = handshakeBookingRequest.ToPickupPacket("","","","","");

@@ -19,7 +19,7 @@ public abstract class OpenSlotFilterBase : IOpenSlotFilter
         return _nextFilter?.IsSlotOpen(entryCar, guid) ?? true;
     }
 
-    public virtual Task<AuthFailedResponse?> ShouldAcceptConnectionAsync(ACTcpClient client, HandshakePickupRequest request)
+    public virtual Task<AuthFailedResponse?> ShouldAcceptConnectionAsync(ACTcpClient client, HandshakeRequest request)
     {
         return _nextFilter?.ShouldAcceptConnectionAsync(client, request) ?? Task.FromResult<AuthFailedResponse?>(null);
     }
