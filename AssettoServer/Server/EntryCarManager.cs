@@ -170,7 +170,7 @@ public class EntryCarManager
         }
     }
 
-    internal async Task<bool> TrySecureSlotAsync(ACTcpClient client, HandshakeRequest handshakeRequest)
+    internal async Task<bool> TrySecureSlotAsync(ACTcpClient client, HandshakePickupRequest handshakeRequest)
     {
         try
         {

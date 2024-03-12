@@ -30,7 +30,7 @@ public class OpenSlotFilterChain
         return _first.IsSlotOpen(entryCar, guid);
     }
 
-    public Task<AuthFailedResponse?> ShouldAcceptConnectionAsync(ACTcpClient client, HandshakeRequest request)
+    public Task<AuthFailedResponse?> ShouldAcceptConnectionAsync(ACTcpClient client, HandshakePickupRequest request)
     {
         return _first.ShouldAcceptConnectionAsync(client, request);
     }

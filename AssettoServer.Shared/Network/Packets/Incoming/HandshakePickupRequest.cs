@@ -1,6 +1,6 @@
 ﻿namespace AssettoServer.Shared.Network.Packets.Incoming;
 
-public struct HandshakeRequest : IIncomingNetworkPacket
+public struct HandshakePickupRequest : IIncomingNetworkPacket
 {
     public ushort ClientVersion;
     public ulong Guid;
@@ -16,6 +16,11 @@ public struct HandshakeRequest : IIncomingNetworkPacket
     {
         ClientVersion = reader.Read<ushort>();
         Guid = ulong.Parse(reader.ReadUTF8String());
+        Name = reader.ReadUTF32String();
+        Team = reader.ReadUTF8String();
+        Nation = reader.ReadUTF8String();
+        RequestedCar = reader.ReadUTF8String();
+        Password = reader.ReadUTF8String();
 
         if (reader.Buffer.Length > reader.ReadPosition + 2)
         {
@@ -31,21 +36,5 @@ public struct HandshakeRequest : IIncomingNetworkPacket
                 }
             }
         }
-    }
-
-    public HandshakePickupRequest ToPickupPacket(string name, string team, string nation, string requestedCar, string password)
-    {
-        return new HandshakePickupRequest
-        {
-            ClientVersion = ClientVersion,
-            Guid = Guid,
-            Name = name,
-            Team = team,
-            Nation = nation,
-            RequestedCar = requestedCar,
-            Password = password,
-            Features = Features,
-            SessionTicket = SessionTicket,
-        };
     }
 }
