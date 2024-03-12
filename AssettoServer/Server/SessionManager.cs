@@ -508,7 +508,7 @@ public class SessionManager : CriticalBackgroundService
             _entryCarManager.BroadcastPacket(new RaceOver
             {
                 IsRace = CurrentSession.Configuration.Type == SessionType.Race,
-                PickupMode = true,
+                PickupMode = _configuration.Server.PickupModeEnabled || CurrentSession.Configuration.Type != SessionType.Race,
                 Results = CurrentSession.Results
             });
         

@@ -146,7 +146,7 @@ public class KunosLobbyRegistration : CriticalBackgroundService
         queryParams["port"] = _configuration.Server.UdpPort.ToString();
         queryParams["clients"] = _entryCarManager.ConnectedCars.Count.ToString();
         queryParams["track"] = _configuration.FullTrackName;
-        queryParams["pickup"] = "1";
+        queryParams["pickup"] = _configuration.Server.PickupModeEnabled ? "1" : "0";
         builder.Query = queryParams.ToString();
         
         HttpResponseMessage response = await _httpClient.GetAsync(builder.ToString(), token);

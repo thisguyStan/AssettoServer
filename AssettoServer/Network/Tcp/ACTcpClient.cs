@@ -776,6 +776,7 @@ public class ACTcpClient : IClient
             _weatherManager.SendWeather(this);
 
             var batched = new BatchedPacket();
+            // TODO only sent in pickup mode?
             batched.Packets.Add(new DriverInfoUpdate { ConnectedCars = connectedCars });
 
             foreach (var car in connectedCars)
