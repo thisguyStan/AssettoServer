@@ -90,6 +90,12 @@ public partial class ACServerConfiguration
         {
             CSPTrackOptions = parsedTrackOptions;
         }
+
+        if (CSPTrackOptions.MinimumCSPVersion.HasValue)
+        {
+            Log.Debug("Using minimum required CSP Version {Version}", CSPTrackOptions.MinimumCSPVersion.Value);
+        }
+
         FullTrackName = string.IsNullOrEmpty(Server.TrackConfig) ? Server.Track : $"{Server.Track}-{Server.TrackConfig}";
         DrsZones = LoadDrsZones(locations.DrsZonePath(CSPTrackOptions.Track, Server.TrackConfig), Extra.EnableGlobalDrs);
         
@@ -333,7 +339,7 @@ public partial class ACServerConfiguration
         if (Extra.MandatoryClientSecurityLevel > 0 
             && loader.LoadedPlugins.All(plugin => plugin.Name != "ClientSecurityPlugin"))
         {
-            Log.Information("{PluginName} not installed, setting {PropertyName} to {Value}", "ClientSecurityPlugin", "MandatoryClientSecurityLevel", 0);
+            Log.Warning("ClientSecurityPlugin not installed, setting MandatoryClientSecurityLevel to 0");
             Extra.MandatoryClientSecurityLevel = 0;
         }
 

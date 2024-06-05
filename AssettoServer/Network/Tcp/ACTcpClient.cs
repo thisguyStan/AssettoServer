@@ -74,7 +74,7 @@ public class ACTcpClient : IClient
     private Task SendLoopTask { get; set; } = null!;
     private long LastChatTime { get; set; }
     private int _disconnectRequested = 0;
-        
+
     private readonly WeatherManager _weatherManager;
     private readonly SessionManager _sessionManager;
     private readonly EntryCarManager _entryCarManager;
@@ -91,17 +91,17 @@ public class ACTcpClient : IClient
     /// Fires when a client passed the checksum checks. This does not mean that the player has finished loading, use ClientFirstUpdateSent for that.
     /// </summary>
     public event EventHandler<ACTcpClient, EventArgs>? ChecksumPassed;
-        
+
     /// <summary>
     /// Fires when a client failed the checksum check.
     /// </summary>
     public event EventHandler<ACTcpClient, EventArgs>? ChecksumFailed;
-        
+
     /// <summary>
     /// Fires when a client has sent a chat message. Set ChatEventArgs.Cancel = true to stop it from being broadcast to other players.
     /// </summary>
     public event EventHandler<ACTcpClient, ChatMessageEventArgs>? ChatMessageReceived;
-        
+
     /// <summary>
     /// Fires when a player has started disconnecting.
     /// </summary>
@@ -137,24 +137,29 @@ public class ACTcpClient : IClient
     /// Fires before sending the car list response
     /// </summary>
     public event EventHandler<ACTcpClient, CarListResponseSendingEventArgs>? CarListResponseSending;
+    
+    /// <summary>
+    /// Fires when a player has authorized for admin permissions.
+    /// </summary>
+    public event EventHandler<ACTcpClient, EventArgs>? LoggedInAsAdministrator;
 
     private class ACTcpClientLogEventEnricher : ILogEventEnricher
     {
         private readonly ACTcpClient _client;
-        private readonly bool _usePrivacyMode;
+        private readonly bool _redactIpAddresses;
 
-        public ACTcpClientLogEventEnricher(ACTcpClient client, bool usePrivacyMode)
+        public ACTcpClientLogEventEnricher(ACTcpClient client, bool redactIpAddresses)
         {
             _client = client;
-            _usePrivacyMode = usePrivacyMode;
+            _redactIpAddresses = redactIpAddresses;
         }
-            
+
         public void Enrich(LogEvent logEvent, ILogEventPropertyFactory propertyFactory)
         {
             var endpoint = (IPEndPoint)_client.TcpClient.Client.RemoteEndPoint!;
             logEvent.AddPropertyIfAbsent(propertyFactory.CreateProperty("ClientName", _client.Name));
             logEvent.AddPropertyIfAbsent(propertyFactory.CreateProperty("ClientSteamId", _client.Guid));
-            logEvent.AddPropertyIfAbsent(propertyFactory.CreateProperty("ClientIpAddress", endpoint.Address.ToPrivacyString(_usePrivacyMode)));
+            logEvent.AddPropertyIfAbsent(propertyFactory.CreateProperty("ClientIpAddress", endpoint.Address.Redact(_redactIpAddresses)));
             logEvent.AddPropertyIfAbsent(propertyFactory.CreateProperty("ClientPort", endpoint.Port));
             if (_client.HardwareIdentifier.HasValue)
             {
@@ -164,7 +169,7 @@ public class ACTcpClient : IClient
     }
 
     public ACTcpClient(
-        ACUdpServer udpServer, 
+        ACUdpServer udpServer,
         TcpClient tcpClient,
         SessionManager sessionManager,
         WeatherManager weatherManager,
@@ -174,14 +179,14 @@ public class ACTcpClient : IClient
         ChecksumManager checksumManager,
         CSPFeatureManager cspFeatureManager,
         CSPServerExtraOptions cspServerExtraOptions,
-        OpenSlotFilterChain openSlotFilter, 
+        OpenSlotFilterChain openSlotFilter,
         CSPClientMessageHandler clientMessageHandler,
         VoteManager voteManager)
     {
         UdpServer = udpServer;
         Logger = new LoggerConfiguration()
             .MinimumLevel.Debug()
-            .Enrich.With(new ACTcpClientLogEventEnricher(this, configuration.Extra.EnablePrivacyMode))
+            .Enrich.With(new ACTcpClientLogEventEnricher(this, configuration.Extra.RedactIpAddresses))
             .WriteTo.Logger(Log.Logger)
             .CreateLogger();
 
@@ -239,7 +244,7 @@ public class ACTcpClient : IClient
     internal void SendPacketUdp<TPacket>(in TPacket packet) where TPacket : IOutgoingNetworkPacket
     {
         if (UdpEndpoint == null) return;
-        
+
         try
         {
             byte[] buffer = UdpSendBuffer.Value!;
@@ -283,7 +288,7 @@ public class ACTcpClient : IClient
                         writer.WritePacket(inner);
                         await writer.SendAsync(DisconnectTokenSource.Token);
                     }
-                    
+
                     await TcpStream.WriteAsync(TcpSendBuffer.AsMemory(streamOffset, (int)tempStream.Position), DisconnectTokenSource.Token);
                 }
                 else
@@ -308,7 +313,7 @@ public class ACTcpClient : IClient
     {
         byte[] buffer = new byte[2046];
         NetworkStream stream = TcpStream;
-        
+
         try
         {
             while (!DisconnectTokenSource.IsCancellationRequested)
@@ -339,7 +344,7 @@ public class ACTcpClient : IClient
                     Guid = handshakeRequest.Guid;
                     HashedGuid = IdFromGuid(Guid);
 
-                    Logger.Information("{ClientName} ({ClientSteamId} - {ClientIpEndpoint}) is attempting to connect ({CarModel})", handshakeRequest.Name, handshakeRequest.Guid, ((IPEndPoint?)TcpClient.Client.RemoteEndPoint)?.ToPrivacyString(_configuration.Extra.EnablePrivacyMode), handshakeRequest.RequestedCar);
+                    Logger.Information("{ClientName} ({ClientSteamId} - {ClientIpEndpoint}) is attempting to connect ({CarModel})", handshakeRequest.Name, handshakeRequest.Guid, ((IPEndPoint?)TcpClient.Client.RemoteEndPoint)?.Redact(_configuration.Extra.RedactIpAddresses), handshakeRequest.RequestedCar);
 
                     List<string> cspFeatures;
                     if (!string.IsNullOrEmpty(handshakeRequest.Features))
@@ -391,7 +396,7 @@ public class ACTcpClient : IClient
                         if (_configuration.Server.CheckAdminPassword(handshakeRequest.Password))
                             IsAdministrator = true;
 
-                        Logger.Information("{ClientName} ({ClientSteamId}, {SessionId} ({CarModel}-{CarSkin})) has connected", 
+                        Logger.Information("{ClientName} ({ClientSteamId}, {SessionId} ({CarModel}-{CarSkin})) has connected",
                             Name, Guid, SessionId, EntryCar.Model, EntryCar.Skin);
 
                         var cfg = _configuration.Server;
@@ -430,7 +435,7 @@ public class ACTcpClient : IClient
                             ChecksumCount = (byte)checksums.Count,
                             ChecksumPaths = checksums.Select(c => c.Key),
                             CurrentTime = 0, // Ignored by AC
-                            LegalTyres = cfg.LegalTyres,
+                            LegalTyres = EntryCar.LegalTyres,
                             RandomSeed = _configuration.RandomSeed,
                             SessionCount = (byte)_configuration.Sessions.Count,
                             Sessions = _configuration.Sessions,
@@ -443,7 +448,7 @@ public class ACTcpClient : IClient
                         {
                             HandshakeResponse = handshakeResponse
                         };
-                        
+
                         await HandshakeAccepted.InvokeAsync(this, args);
 
                         HasStartedHandshake = true;
@@ -545,19 +550,19 @@ public class ACTcpClient : IClient
         foreach (var evt in clientEvent.ClientEvents)
         {
             EntryCar? targetCar = null;
-                
+
             if (evt.Type == ClientEventType.CollisionWithCar)
             {
                 targetCar = _entryCarManager.EntryCars[evt.TargetSessionId];
-                Logger.Information("Collision between {SourceCarName} ({SourceCarSessionId}) and {TargetCarName} ({TargetCarSessionId}), rel. speed {Speed:F0}km/h", 
+                Logger.Information("Collision between {SourceCarName} ({SourceCarSessionId}) and {TargetCarName} ({TargetCarSessionId}), rel. speed {Speed:F0}km/h",
                     Name, EntryCar.SessionId, targetCar.Client?.Name ?? targetCar.AiName, targetCar.SessionId, evt.Speed);
             }
             else
             {
-                Logger.Information("Collision between {SourceCarName} ({SourceCarSessionId}) and environment, rel. speed {Speed:F0}km/h", 
+                Logger.Information("Collision between {SourceCarName} ({SourceCarSessionId}) and environment, rel. speed {Speed:F0}km/h",
                     Name, EntryCar.SessionId, evt.Speed);
             }
-                
+
             Collision?.Invoke(this, new CollisionEventArgs(targetCar, evt.Speed, evt.Position, evt.RelPosition));
         }
     }
@@ -580,7 +585,7 @@ public class ACTcpClient : IClient
             passedChecksum = !_checksumManager.CarChecksums.TryGetValue(EntryCar.Model, out var modelChecksums)
                              || modelChecksums.Count == 0
                              || modelChecksums.Any(c => CarChecksum.AsSpan().SequenceEqual(c.Value));
-            
+
             for (int i = 0; i < allChecksums.Count; i++)
             {
                 if (!allChecksums[i].Value.AsSpan().SequenceEqual(fullChecksum.AsSpan(i * MD5.HashSizeInBytes, MD5.HashSizeInBytes)))
@@ -591,9 +596,9 @@ public class ACTcpClient : IClient
                 }
             }
         }
-        
+
         ChecksumStatus = passedChecksum ? ChecksumStatus.Succeeded : ChecksumStatus.Failed;
-        
+
         if (!passedChecksum)
         {
             ChecksumFailed?.Invoke(this, EventArgs.Empty);
@@ -624,7 +629,7 @@ public class ACTcpClient : IClient
         chatMessage.SessionId = SessionId;
 
         if (string.IsNullOrWhiteSpace(chatMessage.Message)) return;
-            
+
         Logger.Information("CHAT: {ClientName} ({SessionId}): {ChatMessage}", Name, SessionId, chatMessage.Message);
 
         var args = new ChatMessageEventArgs
@@ -638,7 +643,7 @@ public class ACTcpClient : IClient
     {
         DamageUpdateIncoming damageUpdate = reader.ReadPacket<DamageUpdateIncoming>();
         EntryCar.Status.DamageZoneLevel = damageUpdate.DamageZoneLevel;
-            
+
         _entryCarManager.BroadcastPacket(new DamageUpdate
         {
             SessionId = SessionId,
@@ -669,30 +674,30 @@ public class ACTcpClient : IClient
             SessionId = SessionId
         });
     }
-    
+
     private void OnVoteNextSession(PacketReader reader)
     {
         if (!_configuration.Extra.EnableSessionVote) return;
         VoteNextSession voteNextSession = reader.ReadPacket<VoteNextSession>();
-        
+
         _ = _voteManager.SetVote(SessionId, VoteType.NextSession, voteNextSession.Vote);
     }
-    
+
     private void OnVoteRestartSession(PacketReader reader)
     {
         if (!_configuration.Extra.EnableSessionVote) return;
         VoteRestartSession voteRestartSession = reader.ReadPacket<VoteRestartSession>();
-        
+
         _ = _voteManager.SetVote(SessionId, VoteType.RestartSession, voteRestartSession.Vote);
     }
-    
+
     private void OnVoteKickUser(PacketReader reader)
     {
         if (!_configuration.Extra.EnableKickPlayerVote ||
             _configuration.Extra.VoteKickMinimumConnectedPlayers - 1 > _entryCarManager.ConnectedCars.Count) return;
         VoteKickUser voteKickUser = reader.ReadPacket<VoteKickUser>();
-        
-        _ = _voteManager.SetVote(SessionId, VoteType.KickPlayer, voteKickUser.Vote,voteKickUser.TargetSessionId);
+
+        _ = _voteManager.SetVote(SessionId, VoteType.KickPlayer, voteKickUser.Vote, voteKickUser.TargetSessionId);
     }
 
     private void OnP2PUpdate(PacketReader reader)
@@ -710,7 +715,7 @@ public class ACTcpClient : IClient
         {
             if (!_configuration.Extra.EnableUnlimitedP2P && EntryCar.Status.P2PCount > 0)
                 EntryCar.Status.P2PCount--;
-            
+
             _entryCarManager.BroadcastPacket(new P2PUpdate
             {
                 Active = push2Pass.Active,
@@ -729,7 +734,8 @@ public class ACTcpClient : IClient
         {
             PageIndex = carListRequest.PageIndex,
             EntryCarsCount = carsInPage.Count,
-            EntryCars = carsInPage
+            EntryCars = carsInPage,
+            CarResults = _sessionManager.CurrentSession.Results,
         };
 
         CarListResponseSending?.Invoke(this, new CarListResponseSendingEventArgs(carListResponse));
@@ -769,11 +775,11 @@ public class ACTcpClient : IClient
     {
         if (HasSentFirstUpdate)
             return;
-        
+
         TcpClient.ReceiveTimeout = 0;
         EntryCar.LastPongTime = _sessionManager.ServerTimeMilliseconds;
         HasSentFirstUpdate = true;
-        
+
         _ = Task.Run(SendFirstUpdateAsync);
     }
 
@@ -795,10 +801,10 @@ public class ACTcpClient : IClient
                 batched.Packets.Add(new MandatoryPitUpdate { MandatoryPit = car.Status.MandatoryPit, SessionId = car.SessionId });
                 if (car != EntryCar)
                     batched.Packets.Add(new TyreCompoundUpdate { SessionId = car.SessionId, CompoundName = car.Status.CurrentTyreCompound });
-            
+
                 batched.Packets.Add(new P2PUpdate { SessionId = car.SessionId, P2PCount = car.Status.P2PCount });
                 batched.Packets.Add(new BallastUpdate { SessionId = car.SessionId, BallastKg = car.Ballast, Restrictor = car.Restrictor });
-                
+
                 if (_configuration.Extra.AiParams.HideAiCars)
                 {
                     batched.Packets.Add(new CSPCarVisibilityUpdate
@@ -808,15 +814,13 @@ public class ACTcpClient : IClient
                     });
                 }
             }
-            
-            if (EntryCar.FixedSetup != null 
+
+            if (EntryCar.FixedSetup != null
                  && _configuration.Setups.Setups.TryGetValue(EntryCar.FixedSetup, out var setup))
                 batched.Packets.Add(new CarSetup { Setup = setup.Settings });
 
             if (_configuration.DrsZones.Zones.Count > 0)
                 batched.Packets.Add(new DrsZonesUpdate { Zones = _configuration.DrsZones.Zones });
-
-            batched.Packets.Add(CreateLapCompletedPacket(0xFF, 0, 0));
 
             if (_configuration.Extra.EnableClientMessages)
             {
@@ -847,7 +851,8 @@ public class ACTcpClient : IClient
                     }
                 });
             }
-            
+
+            _entryCarManager.BroadcastPacket(CreateLapCompletedPacket(0xFF, 0, 0));
             FirstUpdateSent?.Invoke(this, EventArgs.Empty);
         }
         catch (Exception ex)
@@ -855,9 +860,9 @@ public class ACTcpClient : IClient
             Log.Error(ex, "Error sending first update to {ClientName}", Name);
         }
     }
-    
+
     private void KickForFailedChecksum() => _ = _entryCarManager.KickAsync(this, KickReason.ChecksumFailed, null, null, $"{Name} failed the checksum check and has been kicked.");
-    
+
     private LapCompletedOutgoing CreateLapCompletedPacket(byte sessionId, uint lapTime, int cuts)
     {
         // TODO: double check and rewrite this
@@ -865,6 +870,8 @@ public class ACTcpClient : IClient
             throw new ArgumentNullException(nameof(_sessionManager.CurrentSession.Results));
 
         var laps = _sessionManager.CurrentSession.Results
+            .OrderBy(result => string.IsNullOrEmpty(result.Value.Name))
+            .ThenBy(result => result.Value.Name)
             .Select(result => new LapCompletedOutgoing.CompletedLap
             {
                 SessionId = result.Key,
@@ -873,9 +880,9 @@ public class ACTcpClient : IClient
                 HasCompletedLastLap = (byte)(result.Value.HasCompletedLastLap ? 1 : 0),
                 RacePos = 0,
             });
-            
-        laps = _sessionManager.CurrentSession.Configuration.Type == SessionType.Race 
-            ? laps.OrderBy(lap => lap.RacePos) 
+
+        laps = _sessionManager.CurrentSession.Configuration.Type == SessionType.Race
+            ? laps.OrderBy(lap => lap.RacePos)
             : laps.OrderBy(lap => lap.LapTime); // TODO wrong for race sessions?
 
         return new LapCompletedOutgoing
@@ -903,12 +910,12 @@ public class ACTcpClient : IClient
         {
             if (Interlocked.CompareExchange(ref _disconnectRequested, 1, 0) == 1)
                 return;
-            
+
             await Task.Yield();
-            
+
             if (!string.IsNullOrEmpty(Name))
             {
-                Logger.Debug("Disconnecting {ClientName} ({ClientSteamId} - {ClientIpEndpoint})", Name, Guid, ((IPEndPoint?)TcpClient.Client.RemoteEndPoint)?.ToPrivacyString(_configuration.Extra.EnablePrivacyMode));
+                Logger.Debug("Disconnecting {ClientName} ({ClientSteamId} - {ClientIpEndpoint})", Name, Guid, ((IPEndPoint?)TcpClient.Client.RemoteEndPoint)?.Redact(_configuration.Extra.RedactIpAddresses));
                 Disconnecting?.Invoke(this, EventArgs.Empty);
             }
 
@@ -921,7 +928,7 @@ public class ACTcpClient : IClient
                 DisconnectTokenSource.Dispose();
             }
             catch (ObjectDisposedException) { }
-                
+
             if (IsConnected)
                 await _entryCarManager.DisconnectClientAsync(this);
 
@@ -944,6 +951,14 @@ public class ACTcpClient : IClient
         });
     }
 
+    internal void LoginAsAdministrator()
+    {
+        if (IsAdministrator) return;
+        
+        IsAdministrator = true;
+        LoggedInAsAdministrator?.Invoke(this, EventArgs.Empty);
+    }
+
     /// <summary>
     /// Requires CSP Build >2796
     /// </summary>
@@ -956,7 +971,7 @@ public class ACTcpClient : IClient
             Target = SessionId
         });
     }
-    
+
     private static string IdFromGuid(ulong guid)
     {
         var hash = SHA1.HashData(Encoding.UTF8.GetBytes($"antarcticfurseal{guid}"));
