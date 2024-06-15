@@ -12,6 +12,8 @@ public class VotingWeatherConfiguration : IValidateConfiguration<VotingWeatherCo
     public List<WeatherFxType> BlacklistedWeathers { get; init; } = [];
     [YamlMember(Description = "Number of choices players can choose from at each voting interval")]
     public int NumChoices { get; init; } = 3;
+    [YamlMember(Description = "Enable time voting running deferred to weather voting. With no votes cast, time will not change")]
+    public bool EnableVotingTime { get; init; } = true;
     [YamlMember(Description = "How often a vote takes place")]
     public int VotingIntervalMinutes { get; init; } = 10;
     [YamlMember(Description = "How long the vote stays open")]

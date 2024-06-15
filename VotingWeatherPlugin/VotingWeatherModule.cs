@@ -7,6 +7,7 @@ public class VotingWeatherModule : AssettoServerModule<VotingWeatherConfiguratio
 {
     protected override void Load(ContainerBuilder builder)
     {
+        builder.RegisterType<VotingTime>().AsSelf().As<IAssettoServerAutostart>().SingleInstance();
         builder.RegisterType<VotingWeather>().AsSelf().As<IAssettoServerAutostart>().SingleInstance();
     }
 }
