@@ -10,6 +10,9 @@ local supportAPI_collision = physics.disableCarCollisions ~= nil
 local supportAPI_matrix = ac.getPatchVersionCode() >= 3037
 local trackCompassOffset = 24 -- for SRP
 
+local font = 'Segoe UI'
+local fontBold = 'Segoe UI;Weight=Bold'
+
 --c1xtz: read teleports from server options, requires 'POINT_<num>_TYPE = PA/ST' to be added to the teleports in csp_extra_options.ini to not show up as the default.
 --c1xtz: additional custom types can be created as long as a corresponding 'mapicon_<type>.png' is in the images folder. example: 'POINT_1_TYPE = GS' & 'mapicon_gs.png' for a gas station type.
 --c1xtz: points inside of group inherite the type of the point before, meaning if 'POINT_1_TYPE = PA' and POINT_2 is not specifically given a type, it will inherit the PA type from point 1.
@@ -280,7 +283,7 @@ function script.drawUI(dt)
                 if hoverCID >= 0 then
                     ac.focusCar(hoverCID)
                     nametag = ac.getDriverName(hoverCID)
-                    ui.pushDWriteFont('Segoe UI')
+                    ui.pushDWriteFont(font)
                     ui.beginOutline()                    --c1xtz: added outline to make text more readable
                     ui.dwriteDrawText(ac.getCarName(hoverCID, false), 18, nametag_pos + vec2(0, 30), rgbm(1, 1, 1, 1))
                     ui.endOutline(rgb.colors.black, 0.5) --c1xtz: added outline to make text more readable
@@ -288,11 +291,13 @@ function script.drawUI(dt)
                 else
                     nametag = onlineTeleports[hoverMark][2]
                     --c1xtz: added the name of the teleport point
+                    ui.pushDWriteFont(font)
                     ui.beginOutline()
                     ui.dwriteDrawText(onlineTeleports[hoverMark][5], 18, nametag_pos + vec2(0, 30), rgbm(1, 1, 1, 1))
                     ui.endOutline(rgb.colors.black, 0.5)
+                    ui.popDWriteFont()
                 end
-                ui.pushDWriteFont('Segoe UI;Weight=Bold')
+                ui.pushDWriteFont(fontBold)
                 ui.beginOutline()                  --c1xtz: added outline to make text more readable
                 ui.dwriteDrawText(nametag, 20, nametag_pos, rgbm(1, 1, 1, 1))
                 ui.endOutline(rgb.colors.black, 1) --c1xtz: added outline to make text more readable
@@ -308,7 +313,7 @@ function script.drawUI(dt)
         end)
     elseif ac.getCar(0).speedKmh < 2 and sim.focusedCar == 0 and not ac.getUI().appsHidden then
         local opacity = math.sin(sim.gameTime * 5) / 2 + 0.5
-        ui.pushDWriteFont('Segoe UI;Weight=Bold')
+        ui.pushDWriteFont(fontBold)
         ui.beginOutline()                  --c1xtz: added outline to make text more readable
         ui.dwriteDrawText('Press M key to FastTravel', 20, vec2(sim.windowWidth, sim.windowHeight) * vec2(0.1, 0.9), rgbm(1, 1, 1, opacity))
         ui.endOutline(rgb.colors.black, 1) --c1xtz: added outline to make text more readable
