@@ -46,6 +46,7 @@ public class AdminModule : ACModuleBase
     }
 
     [Command("kick", "kick_id")]
+    [RequireAdmin(Permission = CSPPermission.UserModeration)]
     public Task KickAsync(ACTcpClient player, [Remainder] string? reason = null)
     {
         if (player.SessionId == Client?.SessionId)
@@ -62,6 +63,7 @@ public class AdminModule : ACModuleBase
     }
 
     [Command("ban", "ban_id")]
+    [RequireAdmin(Permission = CSPPermission.UserModeration)]
     public Task BanAsync(ACTcpClient player, [Remainder] string? reason = null)
     {
         if (player.SessionId == Client?.SessionId)
@@ -82,6 +84,7 @@ public class AdminModule : ACModuleBase
     }
 
     [Command("next_session", "ksns")]
+    [RequireAdmin(Permission = CSPPermission.Sessions)]
     public void NextSessionAsync()
     {
         Reply(_sessionManager.NextSession()
@@ -90,6 +93,7 @@ public class AdminModule : ACModuleBase
     }
 
     [Command("restart_session", "ksrs")]
+    [RequireAdmin(Permission = CSPPermission.Sessions)]
     public void RestartSessionAsync()
     {
         Reply(_sessionManager.RestartSession()
@@ -108,6 +112,7 @@ public class AdminModule : ACModuleBase
     }
 
     [Command("settime")]
+    [RequireAdmin(Permission = CSPPermission.Conditions)]
     public void SetTime(string time)
     {
         if (DateTime.TryParseExact(time, "H:mm", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dateTime))
@@ -122,6 +127,7 @@ public class AdminModule : ACModuleBase
     }
 
     [Command("setweather")]
+    [RequireAdmin(Permission = CSPPermission.Conditions)]
     public void SetWeather(int weatherId)
     {
         if (_weatherManager.SetWeatherConfiguration(weatherId))
@@ -135,6 +141,7 @@ public class AdminModule : ACModuleBase
     }
 
     [Command("cspweather")]
+    [RequireAdmin(Permission = CSPPermission.Conditions)]
     public void CspWeather()
     {
         Reply("Available weathers:");
@@ -145,6 +152,7 @@ public class AdminModule : ACModuleBase
     }
 
     [Command("setcspweather")]
+    [RequireAdmin(Permission = CSPPermission.Conditions)]
     public void SetCspWeather(string upcomingStr, int duration)
     {
         if (Enum.TryParse(upcomingStr, true, out WeatherFxType upcoming))
@@ -159,6 +167,7 @@ public class AdminModule : ACModuleBase
     }
 
     [Command("setrain")]
+    [RequireAdmin(Permission = CSPPermission.Conditions)]
     public void SetRain(float intensity, float wetness, float water)
     {
         _weatherManager.CurrentWeather.RainIntensity = intensity;
@@ -168,6 +177,7 @@ public class AdminModule : ACModuleBase
     }
 
     [Command("setgrip")]
+    [RequireAdmin(Permission = CSPPermission.Conditions)]
     public void SetGrip(float grip)
     {
         _weatherManager.CurrentWeather.TrackGrip = grip;
@@ -175,12 +185,14 @@ public class AdminModule : ACModuleBase
     }
 
     [Command("distance"), RequireConnectedPlayer]
+    [RequireAdmin(Permission = CSPPermission.UserModeration)]
     public void GetDistance([Remainder] ACTcpClient player)
     {
         Reply(Vector3.Distance(Client!.EntryCar.Status.Position, player.EntryCar.Status.Position).ToString(CultureInfo.InvariantCulture));
     }
 
     [Command("forcelights")]
+    [RequireAdmin(Permission = CSPPermission.UserModeration)]
     public void ForceLights(string toggle, [Remainder] ACTcpClient player)
     {
         bool forceLights = toggle == "on";
@@ -190,6 +202,7 @@ public class AdminModule : ACModuleBase
     }
 
     [Command("whois")]
+    [RequireAdmin(Permission = CSPPermission.UserModeration)]
     public void WhoIs(ACTcpClient player)
     {
         Reply($"IP: {((IPEndPoint?)player.TcpClient.Client.RemoteEndPoint)?.Redact(_configuration.Extra.RedactIpAddresses)}");
@@ -203,6 +216,7 @@ public class AdminModule : ACModuleBase
 
     // keep restrict for backwards compatibility
     [Command("restrict", "restrictor")]
+    [RequireAdmin(Permission = CSPPermission.RaceControl)]
     public void Restrict(ACTcpClient player, int restrictor)
     {
         if (restrictor is > 400 or < 0)
@@ -217,6 +231,7 @@ public class AdminModule : ACModuleBase
     }
         
     [Command("ballast")]
+    [RequireAdmin(Permission = CSPPermission.RaceControl)]
     public void Ballast(ACTcpClient? player = null, float? ballastKg = null)
     {
         if (player == null || ballastKg == null)
@@ -250,6 +265,7 @@ public class AdminModule : ACModuleBase
     }
 
     [Command("whitelist")]
+    [RequireAdmin(Permission = CSPPermission.UserModeration)]
     public async Task Whitelist(ulong guid)
     {
         await _whitelist.AddAsync(guid);

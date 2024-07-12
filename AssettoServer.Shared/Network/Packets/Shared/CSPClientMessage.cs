@@ -40,6 +40,7 @@ public enum CSPClientMessageType : ushort
     SignatureOut = 3,
     SignatureVerificationIn = 4,
     SignatureVerificationOut = 5,
+    ExplicitAdminState = 102,
     ConditionsV1 = 1000,
     ConditionsV2 = 1001,
     ChatSharedSetup = 2000,

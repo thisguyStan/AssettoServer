@@ -17,6 +17,7 @@ using AssettoServer.Server;
 using AssettoServer.Server.Blacklist;
 using AssettoServer.Server.Configuration;
 using AssettoServer.Server.OpenSlotFilters;
+using AssettoServer.Server.UserGroup;
 using AssettoServer.Server.Weather;
 using AssettoServer.Shared.Model;
 using AssettoServer.Shared.Network.Packets;
@@ -66,6 +67,8 @@ public class ACTcpClient : IClient
     internal bool SupportsCSPCustomUpdate { get; private set; }
     public int? CSPVersion { get; private set; }
     internal string ApiKey { get; }
+    public List<string> CSPFeatures { get; private set; } = [];
+    public CSPPermission CSPPermission { get; private set; }
 
     private static ThreadLocal<byte[]> UdpSendBuffer { get; } = new(() => GC.AllocateArray<byte>(1500, true));
     private byte[] TcpSendBuffer { get; }
@@ -85,6 +88,7 @@ public class ACTcpClient : IClient
     private readonly CSPServerExtraOptions _cspServerExtraOptions;
     private readonly OpenSlotFilterChain _openSlotFilter;
     private readonly CSPClientMessageHandler _clientMessageHandler;
+    private readonly UserGroupManager _userGroupManager;
     private readonly VoteManager _voteManager;
 
     /// <summary>
@@ -181,6 +185,7 @@ public class ACTcpClient : IClient
         CSPServerExtraOptions cspServerExtraOptions,
         OpenSlotFilterChain openSlotFilter,
         CSPClientMessageHandler clientMessageHandler,
+        UserGroupManager userGroupManager,
         VoteManager voteManager)
     {
         UdpServer = udpServer;
@@ -201,6 +206,7 @@ public class ACTcpClient : IClient
         _cspServerExtraOptions = cspServerExtraOptions;
         _openSlotFilter = openSlotFilter;
         _clientMessageHandler = clientMessageHandler;
+        _userGroupManager = userGroupManager;
         _voteManager = voteManager;
 
         tcpClient.ReceiveTimeout = (int)TimeSpan.FromMinutes(5).TotalMilliseconds;
@@ -346,15 +352,10 @@ public class ACTcpClient : IClient
 
                     Logger.Information("{ClientName} ({ClientSteamId} - {ClientIpEndpoint}) is attempting to connect ({CarModel})", handshakeRequest.Name, handshakeRequest.Guid, ((IPEndPoint?)TcpClient.Client.RemoteEndPoint)?.Redact(_configuration.Extra.RedactIpAddresses), handshakeRequest.RequestedCar);
 
-                    List<string> cspFeatures;
                     if (!string.IsNullOrEmpty(handshakeRequest.Features))
                     {
-                        cspFeatures = handshakeRequest.Features.Split(',').ToList();
-                        Logger.Debug("{ClientName} supports extra CSP features: {ClientFeatures}", handshakeRequest.Name, cspFeatures);
-                    }
-                    else
-                    {
-                        cspFeatures = new List<string>();
+                        CSPFeatures = handshakeRequest.Features.Split(',').ToList();
+                        Logger.Debug("{ClientName} supports extra CSP features: {ClientFeatures}", handshakeRequest.Name, CSPFeatures);
                     }
 
                     AuthFailedResponse? response;
@@ -370,7 +371,7 @@ public class ACTcpClient : IClient
                         SendPacket(new SessionClosedResponse());
                     else if (Name.Length == 0)
                         SendPacket(new AuthFailedResponse("Driver name cannot be empty."));
-                    else if (!_cspFeatureManager.ValidateHandshake(cspFeatures))
+                    else if (!_cspFeatureManager.ValidateHandshake(CSPFeatures))
                         SendPacket(new AuthFailedResponse("Missing CSP features. Please update CSP and/or Content Manager."));
                     else if ((response = await _openSlotFilter.ShouldAcceptConnectionAsync(this, handshakeRequest)).HasValue)
                         SendPacket(response.Value);
@@ -382,9 +383,9 @@ public class ACTcpClient : IClient
                             throw new InvalidOperationException("No EntryCar set even though handshake started");
 
                         EntryCar.SetActive();
-                        SupportsCSPCustomUpdate = _configuration.Extra.EnableCustomUpdate && cspFeatures.Contains("CUSTOM_UPDATE");
+                        SupportsCSPCustomUpdate = _configuration.Extra.EnableCustomUpdate && CSPFeatures.Contains("CUSTOM_UPDATE");
 
-                        var cspVersionStr = cspFeatures.LastOrDefault("");
+                        var cspVersionStr = CSPFeatures.LastOrDefault("");
                         if (int.TryParse(cspVersionStr, out var cspVersion))
                         {
                             CSPVersion = cspVersion;
@@ -831,6 +832,17 @@ public class ACTcpClient : IClient
                 });
             }
 
+            if (CSPFeatures.Contains("EXPLICIT_ADMIN_STATE"))
+            {
+                if (await TryEvaluatePermissions())
+                {
+                    batched.Packets.Add(new CSPExplicitAdminState
+                    {
+                        Permission = CSPPermission
+                    });
+                }
+            }
+
             SendPacket(batched);
 
             if (ChecksumStatus == ChecksumStatus.Failed)
@@ -967,6 +979,31 @@ public class ACTcpClient : IClient
             Enabled = collisionEnabled,
             Target = SessionId
         });
+    }
+
+    public async Task<bool> TryEvaluatePermissions()
+    {
+        var oldPerms = CSPPermission;
+        CSPPermission newPerms = 0;
+        
+        if (IsAdministrator)
+        {
+            newPerms = CSPPermission.FullAdmin;
+        }
+        else if (_configuration.Extra.UserGroupCommandPermissions != null)
+        {
+            foreach (var permGroup in _configuration.Extra.UserGroupCommandPermissions)
+            {
+                if (_userGroupManager.TryResolve(permGroup.UserGroup, out var group)
+                    && await group.ContainsAsync(Guid))
+                {
+                    newPerms = permGroup.CSPPermissions.Aggregate(newPerms, (current, perm) => current | perm);
+                }
+            }
+        }
+
+        CSPPermission = newPerms;
+        return CSPPermission == oldPerms;
     }
 
     private static string IdFromGuid(ulong guid)

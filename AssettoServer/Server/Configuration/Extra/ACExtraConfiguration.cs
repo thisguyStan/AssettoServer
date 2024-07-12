@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
+using AssettoServer.Shared.Network.Packets.Outgoing;
 using AssettoServer.Utils;
 using CommunityToolkit.Mvvm.ComponentModel;
 using JetBrains.Annotations;
@@ -165,6 +166,9 @@ public partial class ACExtraConfiguration : ObservableObject
                     "setweather",
                     "setcspweather",
                     "setrain"
+                ],
+                CSPPermissions = [
+                    CSPPermission.UserModeration
                 ]
             }  
         ],

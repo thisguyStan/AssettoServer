@@ -3,12 +3,14 @@ using System.Threading.Tasks;
 using AssettoServer.Commands.Contexts;
 using AssettoServer.Server.Configuration;
 using AssettoServer.Server.UserGroup;
+using AssettoServer.Shared.Network.Packets.Outgoing;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace AssettoServer.Commands.Attributes;
 
 public class RequireAdminAttribute : CheckAttribute
 {
+    public CSPPermission Permission { get; set; }
     public override async ValueTask<CheckResult> CheckAsync(CommandContext context)
     {
         switch (context)
@@ -24,7 +26,8 @@ public class RequireAdminAttribute : CheckAttribute
                 {
                     foreach (var perm in config.Extra.UserGroupCommandPermissions)
                     {
-                        if (perm.Commands.Contains(chatContext.Command.Name)
+                        if ((perm.Commands.Contains(chatContext.Command.Name)
+                            || (Permission > 0 && perm.CSPPermissions.Contains(Permission)))
                             && userGroupManager.TryResolve(perm.UserGroup, out var group)
                             && await group.ContainsAsync(chatContext.Client.Guid))
                         {
