@@ -17,9 +17,10 @@ public class CSPExplicitAdminState : IOutgoingNetworkPacket
 [Flags]
 public enum CSPPermission : uint
 {
-    Conditions = 1 << 0,
-    RaceControl = 1 << 1,
-    Sessions = 1 << 2,
-    UserModeration = 1 << 3,
-    FullAdmin = uint.MaxValue, 
+    Conditions     = 0x0000_0001, // Change time and weather
+    RaceControl    = 0x0000_0002, // Set ballast and restrictor, give out penalties
+    Sessions       = 0x0000_0008, // Restart and skip sessions
+    UserModeration = 0x1000_0000, // Kick and ban players
+    Permissions    = 0x2000_0000, // Manage permissions
+    Admin          = 0xFFFF_FFFF  // All permissions
 }

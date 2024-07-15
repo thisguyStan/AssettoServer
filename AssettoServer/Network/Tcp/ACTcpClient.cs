@@ -832,17 +832,6 @@ public class ACTcpClient : IClient
                 });
             }
 
-            if (CSPFeatures.Contains("EXPLICIT_ADMIN_STATE"))
-            {
-                if (await TryEvaluatePermissions())
-                {
-                    batched.Packets.Add(new CSPExplicitAdminState
-                    {
-                        Permission = CSPPermission
-                    });
-                }
-            }
-
             SendPacket(batched);
 
             if (ChecksumStatus == ChecksumStatus.Failed)
@@ -862,6 +851,11 @@ public class ACTcpClient : IClient
                         await _entryCarManager.KickAsync(this, KickReason.ChecksumFailed, null, null, $"{Name} did not send the requested checksums.");
                     }
                 });
+            }
+
+            if (CSPFeatures.Contains("EXPLICIT_ADMIN_STATE"))
+            {
+                await UpdateExplicitAdminState();
             }
 
             _entryCarManager.BroadcastPacket(CreateLapCompletedPacket(0xFF, 0, 0));
@@ -981,14 +975,13 @@ public class ACTcpClient : IClient
         });
     }
 
-    public async Task<bool> TryEvaluatePermissions()
+    public async Task UpdateExplicitAdminState()
     {
-        var oldPerms = CSPPermission;
         CSPPermission newPerms = 0;
         
         if (IsAdministrator)
         {
-            newPerms = CSPPermission.FullAdmin;
+            newPerms = CSPPermission.Admin;
         }
         else if (_configuration.Extra.UserGroupCommandPermissions != null)
         {
@@ -1002,8 +995,13 @@ public class ACTcpClient : IClient
             }
         }
 
+        if (CSPPermission == newPerms) return;
+
         CSPPermission = newPerms;
-        return CSPPermission == oldPerms;
+        SendPacket(new CSPExplicitAdminState
+        {
+            Permission = CSPPermission
+        });
     }
 
     private static string IdFromGuid(ulong guid)
