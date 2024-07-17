@@ -102,6 +102,7 @@ public class AdminModule : ACModuleBase
     }
     
     [Command("pit")]
+    [RequireAdmin(Permission = CSPPermission.UserModeration)]
     public void TeleportToPits([Remainder] ACTcpClient player)
     {
         _sessionManager.SendCurrentSession(player);
@@ -192,6 +193,7 @@ public class AdminModule : ACModuleBase
     }
 
     [Command("forcelights")]
+    [Description("Force a player to always have low beams on by typing 'on' for the argument 'toggle'")]
     [RequireAdmin(Permission = CSPPermission.UserModeration)]
     public void ForceLights(string toggle, [Remainder] ACTcpClient player)
     {
@@ -202,6 +204,7 @@ public class AdminModule : ACModuleBase
     }
 
     [Command("whois")]
+    [Description("Get information about a player")]
     [RequireAdmin(Permission = CSPPermission.UserModeration)]
     public void WhoIs(ACTcpClient player)
     {
@@ -252,6 +255,7 @@ public class AdminModule : ACModuleBase
     }
 
     [Command("set")]
+    [RequireAdmin(Permission = CSPPermission.Configuration)]
     public void Set(string key, [Remainder] string value)
     {
         try

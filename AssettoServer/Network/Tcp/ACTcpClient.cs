@@ -853,10 +853,7 @@ public class ACTcpClient : IClient
                 });
             }
 
-            if (CSPFeatures.Contains("EXPLICIT_ADMIN_STATE"))
-            {
-                await UpdateExplicitAdminState();
-            }
+            _ = UpdateExplicitAdminState();
 
             _entryCarManager.BroadcastPacket(CreateLapCompletedPacket(0xFF, 0, 0));
             FirstUpdateSent?.Invoke(this, EventArgs.Empty);

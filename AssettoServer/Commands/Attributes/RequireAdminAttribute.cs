@@ -1,4 +1,5 @@
-﻿using Qmmands;
+﻿using System.Linq;
+using Qmmands;
 using System.Threading.Tasks;
 using AssettoServer.Commands.Contexts;
 using AssettoServer.Server.Configuration;
@@ -10,7 +11,7 @@ namespace AssettoServer.Commands.Attributes;
 
 public class RequireAdminAttribute : CheckAttribute
 {
-    public CSPPermission Permission { get; set; }
+    public CSPPermission Permission { get; set; } = CSPPermission.Admin;
     public override async ValueTask<CheckResult> CheckAsync(CommandContext context)
     {
         switch (context)
@@ -27,7 +28,7 @@ public class RequireAdminAttribute : CheckAttribute
                     foreach (var perm in config.Extra.UserGroupCommandPermissions)
                     {
                         if ((perm.Commands.Contains(chatContext.Command.Name)
-                            || (Permission > 0 && perm.CSPPermissions.Contains(Permission)))
+                            || (perm.CSPPermissions.Aggregate(CSPPermission.None, (current, next) => current | next) & Permission) == Permission)
                             && userGroupManager.TryResolve(perm.UserGroup, out var group)
                             && await group.ContainsAsync(chatContext.Client.Guid))
                         {
