@@ -51,7 +51,7 @@ mapShot:setClippingPlanes(10, 30000)
 
 local mapFullShot = ac.GeometryShot(ac.findNodes('sceneRoot:yes'), screenSize, 1, false)
 
-local roadsNode = ac.findNodes('trackRoot:yes'):findMeshes('{ ?road?, ?ROAD? }')
+local roadsNode = ac.findNodes('trackRoot:yes'):findMeshes('{ ?road?, ?ROAD? , ?jnc_asp?}')
 local roadsShot = ac.GeometryShot(roadsNode, screenSize, 1, false)
 roadsShot:setShadersType(render.ShadersType.Simplified)
 roadsShot:setAmbientColor(rgbm(100, 100, 100, 1))
