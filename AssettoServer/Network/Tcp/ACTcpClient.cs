@@ -259,7 +259,7 @@ public class ACTcpClient : IClient
         }
     }
 
-    internal void SendPacketUdp<TPacket>(in TPacket packet) where TPacket : IOutgoingNetworkPacket
+    public void SendPacketUdp<TPacket>(in TPacket packet) where TPacket : IOutgoingNetworkPacket
     {
         if (UdpEndpoint == null) return;
 
@@ -1009,6 +1009,8 @@ public class ACTcpClient : IClient
             Target = SessionId
         });
     }
+
+    public void SendChatMessage(string message, byte senderId = 255) => SendPacket(new ChatMessage { Message = message, SessionId = senderId });
 
     private static string IdFromGuid(ulong guid)
     {
