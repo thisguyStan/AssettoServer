@@ -1,5 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using AssettoServer.Server;
 using AssettoServer.Server.Configuration;
@@ -14,13 +15,15 @@ namespace ReplayPlugin;
 
 public class ReplayManager
 {
+    private static readonly string SegmentPath = Path.Join("cache", "replay", Guid.NewGuid().ToString());
+    
     private readonly ReplayConfiguration _configuration;
     private readonly ACServerConfiguration _serverConfiguration;
     private readonly EntryCarManager _entryCarManager;
     private readonly WeatherManager _weather;
     private readonly SessionManager _sessionManager;
     private readonly EntryCarExtraDataManager _extraData;
-    private readonly ReplayPlayerInfoProvider _playerInfo;
+    private readonly ReplayMetadataProvider _metadata;
 
     private readonly ConcurrentQueue<ReplaySegment> _segments = [];
 
@@ -36,7 +39,7 @@ public class ReplayManager
         SessionManager sessionManager,
         ReplayConfiguration configuration,
         EntryCarExtraDataManager extraData,
-        ReplayPlayerInfoProvider playerInfo)
+        ReplayMetadataProvider metadata)
     {
         _entryCarManager = entryCarManager;
         _serverConfiguration = serverConfiguration;
@@ -44,8 +47,9 @@ public class ReplayManager
         _sessionManager = sessionManager;
         _configuration = configuration;
         _extraData = extraData;
-        _playerInfo = playerInfo;
+        _metadata = metadata;
 
+        Directory.CreateDirectory(SegmentPath);
         AddSegment();
     }
 
@@ -64,7 +68,8 @@ public class ReplayManager
         {
             Log.Debug("Removing old replay segment");
             _segments.TryDequeue(out _);
-            _playerInfo.Cleanup(segment.EndPlayerInfoIndex);
+            segment.Dispose();
+            _metadata.Cleanup(segment.EndPlayerInfoIndex);
         }
     }
 
@@ -85,9 +90,12 @@ public class ReplayManager
 
         segmentSize = Math.Clamp(segmentSize, _configuration.MinSegmentSizeBytes, _configuration.MaxSegmentSizeBytes);
         Log.Debug("Target replay segment size: {Size}", segmentSize.Bytes());
-        
-        _currentSegment = new ReplaySegment(segmentSize);
+
+        var oldSegment = _currentSegment;
+        _currentSegment = new ReplaySegment(Path.Join(SegmentPath, $"{Guid.NewGuid()}.rs1"), segmentSize);
         _segments.Enqueue(_currentSegment);
+        
+        oldSegment?.Unload();
     }
 
     public void AddFrame<TState>(int numCarFrames, int numAiFrames, int numAiMappings, uint playerInfoIndex, TState state,
@@ -100,16 +108,77 @@ public class ReplayManager
         }
     }
 
-    public void WriteReplay(long timeSeconds, byte targetSessionId, string filename)
+    public void WriteReplay(int timeSeconds, byte targetSessionId, string filename)
     {
         var startTime = Math.Max(0, _sessionManager.ServerTimeMilliseconds - timeSeconds * 1000);
-        var segments = _segments.SkipWhile(s => s.EndTime < startTime).ToList();
+        var endTime = _sessionManager.ServerTimeMilliseconds;
+        
+        WriteReplay(startTime, endTime, targetSessionId, filename);
+    }
+
+    private static uint GetTotalFrameCount(long startTime, long endTime, List<ReplaySegment> segments)
+    {
+        var totalCount = 0U;
+        
+        if (segments.Count == 1)
+        {
+            foreach (var frame in segments[0])
+            {
+                if (frame.Header.ServerTime >= startTime && frame.Header.ServerTime < endTime)
+                {
+                    totalCount++;
+                }
+            }
+        }
+        else if (segments.Count > 1)
+        {
+            foreach (var frame in segments[0])
+            {
+                if (frame.Header.ServerTime >= startTime)
+                {
+                    totalCount++;
+                }
+            }
+            
+            for (int i = 1; i < segments.Count - 1; i++)
+            {
+                totalCount += (uint)segments[i].Index.Count;
+            }
+            
+            foreach (var frame in segments[^1])
+            {
+                if (frame.Header.ServerTime < endTime)
+                {
+                    totalCount++;
+                }
+            }
+        }
+
+        return totalCount;
+    }
+
+    public void WriteReplay(long startTime, long endTime, byte targetSessionId, string filename)
+    {
+        // TODO make sure no segments are deleted while writing replay
+        var segments = _segments
+            .SkipWhile(s => s.EndTime < startTime)
+            .TakeWhile(s => s.StartTime < endTime)
+            .ToList();
+
+        if (segments.Count == 0)
+        {
+            Log.Error("Trying to write replay but no replay segments present");
+            return;
+        }
         
         using var file = File.Create(filename);
         using var writer = new BinaryWriter(file);
 
-        var totalCount = (uint)segments.Sum(s => s.Index.Count);
-
+        using var playerInfoIndexStream = new MemoryStream();
+        using var playerInfoIndexWriter = new BinaryWriter(playerInfoIndexStream);
+        
+        var totalCount = GetTotalFrameCount(startTime, endTime, segments);
+        
         var header = new KunosReplayHeader
         {
             RecordingIntervalMs = 1000.0 / _configuration.RefreshRateHz,
@@ -122,33 +191,56 @@ public class ReplayManager
         };
         header.ToWriter(writer);
 
-        foreach (var segment in segments)
-        {
-            foreach (var frame in segment)
-            {
-                writer.WriteStruct(new KunosReplayTrackFrame
-                {
-                    SunAngle = frame.Header.SunAngle
-                });
-            }
-        }
-
+        var trackFramesPosition = file.Position;
+        file.Seek(Unsafe.SizeOf<KunosReplayTrackFrame>() * totalCount, SeekOrigin.Current);
+        
+        
+        var carFramePositions = new List<long>();
         for (int i = 0; i < _entryCarManager.EntryCars.Length; i++)
         {
             var carHeader = new KunosReplayCarHeader
             {
                 CarId = _entryCarManager.EntryCars[i].Model,
-                DriverName = $"Player {i}",
+                DriverName = $"AssettoServer App Missing ({i})",
                 CarSkinId = _entryCarManager.EntryCars[i].Skin,
                 CarFrames = totalCount
             };
             carHeader.ToWriter(writer);
+
+            carFramePositions.Add(file.Position);
+            file.Seek(Unsafe.SizeOf<KunosReplayCarFrame>() * totalCount, SeekOrigin.Current);
             
-            var aiFrameMappings = Span<short>.Empty;
-            foreach (var segment in segments)
+            writer.Write(0);
+        }
+
+        var oldPosition = file.Position;
+        foreach (var segment in segments)
+        {
+            file.Seek(trackFramesPosition, SeekOrigin.Begin);
+            foreach (var frame in segment)
             {
-                foreach (var frame in segment)
+                if (frame.Header.ServerTime < startTime) continue;
+                if (frame.Header.ServerTime > endTime) break;
+                
+                writer.WriteStruct(new KunosReplayTrackFrame
                 {
+                    SunAngle = frame.Header.SunAngle
+                });
+                
+                playerInfoIndexWriter.Write(frame.Header.PlayerInfoIndex);
+            }
+            trackFramesPosition = file.Position;
+
+            foreach (var frame in segment)
+            {
+                if (frame.Header.ServerTime < startTime) continue;
+                if (frame.Header.ServerTime > endTime) break;
+                
+                var aiFrameMappings = Span<short>.Empty;
+                for (int i = 0; i < _entryCarManager.EntryCars.Length; i++)
+                {
+                    file.Seek(carFramePositions[i], SeekOrigin.Begin);
+                    
                     var foundFrame = false;
                     var foundAiMapping = false;
                     foreach (var carFrame in frame.CarFrames)
@@ -183,12 +275,18 @@ public class ReplayManager
                     {
                         new ReplayCarFrame().ToWriter(writer, false, EntryCarExtraData.Empty);
                     }
+
+                    carFramePositions[i] = file.Position;
                 }
             }
 
-            writer.Write(0);
+            if (segment != _currentSegment)
+            {
+                segment.Unload();
+            }
         }
-        
+            
+        file.Seek(oldPosition, SeekOrigin.Begin);
         writer.Write(0);
 
         var cspDataStartPosition = writer.BaseStream.Position;
@@ -196,19 +294,13 @@ public class ReplayManager
         writer.WriteLengthPrefixed(CspExtraStreamMagic);
         writer.WriteCspCompressedExtraData(0xB197F00E9828B262, w =>
         {
-            foreach (var segment in segments)
-            {
-                foreach (var frame in segment)
-                {
-                    w.Write(frame.Header.PlayerInfoIndex);
-                }
-            }
+            playerInfoIndexStream.WriteTo(w.BaseStream);
         });
         
         writer.WriteLengthPrefixed(CspExtraBlobMagic);
         writer.WriteCspCompressedExtraData(0x86CE5FCE612D18DF, w =>
         {
-            JsonSerializer.Serialize(w.BaseStream, _playerInfo.PlayerInfos);
+            JsonSerializer.Serialize(w.BaseStream, _metadata.GenerateMetadata());
         });
         
         writer.Write(CspMagic);
