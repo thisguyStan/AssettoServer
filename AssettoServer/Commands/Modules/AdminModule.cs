@@ -12,9 +12,9 @@ using AssettoServer.Server.Configuration;
 using AssettoServer.Server.Weather.Implementation;
 using AssettoServer.Server.Whitelist;
 using AssettoServer.Shared.Network.Packets.Outgoing;
-using AssettoServer.Shared.Network.Packets.Shared;
 using AssettoServer.Shared.Utils;
 using AssettoServer.Shared.Weather;
+using AssettoServer.Utils;
 using JetBrains.Annotations;
 
 namespace AssettoServer.Commands.Modules;
@@ -89,7 +89,7 @@ public class AdminModule : ACModuleBase
     {
         Reply(_sessionManager.NextSession()
             ? "OK. Moving to next session"
-            : "Error. Couldn't move to next session. Player is connecting");
+            : "Error. Couldn't move to next session. Player is connecting or server is shutting down");
     }
 
     [Command("restart_session", "ksrs")]
@@ -106,7 +106,7 @@ public class AdminModule : ACModuleBase
     public void TeleportToPits([Remainder] ACTcpClient player)
     {
         _sessionManager.SendCurrentSession(player);
-        player.SendPacket(new ChatMessage { SessionId = 255, Message = "You have been teleported to the pits." });
+        player.SendChatMessage("You have been teleported to the pits.");
 
         if (player.SessionId != Client?.SessionId)
             Reply($"{player.Name} has been teleported to the pits.");
@@ -175,14 +175,22 @@ public class AdminModule : ACModuleBase
         _weatherManager.CurrentWeather.RainWetness = wetness;
         _weatherManager.CurrentWeather.RainWater = water;
         _weatherManager.SendWeather();
+        Reply("Rain has been set.");
     }
 
     [Command("setgrip")]
     [RequireAdmin(Permission = CSPPermission.Conditions)]
     public void SetGrip(float grip)
     {
-        _weatherManager.CurrentWeather.TrackGrip = grip;
-        _weatherManager.SendWeather();
+        if (grip is < 0 or > 1)
+        {
+            Reply("Invalid input, please use a decimal between 0 and 1. Example: 0.95");
+        }
+        else
+        {
+            _configuration.Server.DynamicTrack.OverrideGrip = grip;
+            Reply("Grip has been set.");
+        }
     }
 
     [Command("distance"), RequireConnectedPlayer]
@@ -280,6 +288,19 @@ public class AdminModule : ACModuleBase
     public void Say([Remainder] string message)
     {
         Broadcast("CONSOLE: " + message);
+    }
+
+    [Command("noclip"), RequireConnectedPlayer]
+    public void NoClip(bool enable)
+    {
+        if (_configuration.CSPTrackOptions.MinimumCSPVersion is null or < CSPVersion.V0_2_8)
+        {
+            Reply("Noclip is disabled. Please set a minimum required CSP version of 0.2.8 (3424) or higher");
+            return;
+        }
+        
+        Client?.EntryCar.SetCollisions(!enable);
+        Reply(enable ? "Noclip enabled" : "Noclip disabled");
     }
     
 #if DEBUG

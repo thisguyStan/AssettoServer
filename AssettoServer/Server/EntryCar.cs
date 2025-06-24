@@ -7,7 +7,6 @@ using AssettoServer.Network.ClientMessages;
 using AssettoServer.Server.Ai;
 using AssettoServer.Server.Ai.Splines;
 using AssettoServer.Server.Configuration;
-using AssettoServer.Server.Configuration.Extra;
 using AssettoServer.Shared.Model;
 using AssettoServer.Shared.Network.Packets.Incoming;
 using AssettoServer.Shared.Network.Packets.Outgoing;
@@ -21,7 +20,8 @@ namespace AssettoServer.Server;
 public partial class EntryCar : IEntryCar<ACTcpClient>
 { 
     public ACTcpClient? Client { get; internal set; }
-    public CarStatus Status { get; private set; } = new CarStatus();
+    public CarStatus Status { get; private set; } = new();
+    public bool EnableCollisions { get; private set; } = true;
 
     public bool ForceLights { get; internal set; }
 
@@ -49,7 +49,7 @@ public partial class EntryCar : IEntryCar<ACTcpClient>
     public int OutsideNetworkBubbleUpdateRateMs { get; internal set; }
 
     internal long[] OtherCarsLastSentUpdateTime { get; }
-    internal EntryCar? TargetCar { get; set; }
+    public EntryCar? TargetCar { get; set; }
     private long LastFallCheckTime{ get; set; }
 
     /// <summary>
@@ -102,16 +102,42 @@ public partial class EntryCar : IEntryCar<ACTcpClient>
         AiPakSequenceIds = new byte[entryCarManager.EntryCars.Length];
         LastSeenAiState = new AiState[entryCarManager.EntryCars.Length];
         LastSeenAiSpawn = new byte[entryCarManager.EntryCars.Length];
-            
+        
         Logger = new LoggerConfiguration()
             .MinimumLevel.Debug()
             .Enrich.With(new EntryCarLogEventEnricher(this))
             .WriteTo.Logger(Log.Logger)
             .CreateLogger();
-            
+        
+        _sessionManager.SessionChanged += OnSessionChanged;
+        
         AiInit();
     }
 
+    private void OnSessionChanged(SessionManager sender, SessionChangedEventArgs args)
+    {
+        Status = new CarStatus
+        {
+            P2PCount = (short)(_configuration.Extra.EnableUnlimitedP2P ? 99 : 15),
+            MandatoryPit = _configuration.Server.PitWindowStart < _configuration.Server.PitWindowEnd,
+        };
+        
+        Client?.SendPacket(new P2PUpdate
+        {
+            P2PCount = Status.P2PCount,
+            SessionId = SessionId
+        });
+            
+        Client?.SendPacket(new MandatoryPitUpdate
+        {
+            MandatoryPit = Status.MandatoryPit,
+            SessionId = SessionId
+        });
+    }
+
+    /// <summary>
+    /// Only call this function to do a clean reset of this EntryCar, e.g. when a player disconnects
+    /// </summary>
     internal void Reset()
     {
         ResetInvoked?.Invoke(this, EventArgs.Empty);
@@ -130,18 +156,6 @@ public partial class EntryCar : IEntryCar<ACTcpClient>
             MandatoryPit = _configuration.Server.PitWindowStart < _configuration.Server.PitWindowEnd,
         };
         TargetCar = null;
-        
-        Client?.SendPacket(new P2PUpdate
-        {
-            P2PCount = Status.P2PCount,
-            SessionId = SessionId
-        });
-            
-        Client?.SendPacket(new MandatoryPitUpdate
-        {
-            MandatoryPit = Status.MandatoryPit,
-            SessionId = SessionId
-        });
     }
 
     internal void SetActive()
@@ -297,6 +311,22 @@ public partial class EntryCar : IEntryCar<ACTcpClient>
         var targetPosition = target.TargetCar != null ? target.TargetCar.Status.Position : target.Status.Position;
         return Vector3.DistanceSquared(Status.Position, targetPosition) < range * range;
     }
+    
+    /// <summary>
+    /// This is broken on CSP &lt; 0.2.8
+    /// </summary>
+    /// <param name="enable">Enable collisions</param>
+    public void SetCollisions(bool enable)
+    {
+        if (EnableCollisions == enable) return;
+        
+        EnableCollisions = enable;
+        _entryCarManager.BroadcastPacket(new CollisionUpdatePacket
+        {
+            SessionId = SessionId,
+            Enabled = EnableCollisions
+        });
+    }
 
     public bool TryResetPosition()
     {
@@ -318,16 +348,14 @@ public partial class EntryCar : IEntryCar<ACTcpClient>
         var position = splinePoint.Position;
         var direction = - _spline.Operations.GetForwardVector(splinePoint.NextId);
         
-        Client?.SendCollisionUpdatePacket(false);
+        SetCollisions(false);
         
         _ = Task.Run(async () =>
         {
             await Task.Delay(500);
-        
             Client?.SendTeleportCarPacket(position, direction);
             await Task.Delay(10000);
-        
-            Client?.SendCollisionUpdatePacket(true);
+            SetCollisions(true);
         });
     
         Logger.Information("Reset position for {Player} ({SessionId})",Client?.Name, Client?.SessionId);

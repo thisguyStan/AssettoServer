@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net8.0</TargetFramework>
+        <TargetFramework>net9.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <EnableDynamicLoading>true</EnableDynamicLoading>
@@ -31,12 +31,8 @@
     <ItemGroup>
         <None Remove="lua\reconnectclient.lua" />
         <EmbeddedResource Include="lua\reconnectclient.lua" />
-        <None Update="Content\reconnecting.png">
+        <None Update="wwwroot\**\*">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
-    </ItemGroup>
-
-    <ItemGroup>
-        <Folder Include="Content" />
     </ItemGroup>
 </Project>
