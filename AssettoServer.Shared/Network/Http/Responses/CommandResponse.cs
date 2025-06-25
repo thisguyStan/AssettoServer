@@ -1,5 +1,5 @@
 using System.Text.Json.Serialization;
-using AssettoServer.Shared.Network.Packets.Outgoing;
+using AssettoServer.Shared.Network.Packets.Shared;
 
 namespace AssettoServer.Shared.Network.Http.Responses;
 

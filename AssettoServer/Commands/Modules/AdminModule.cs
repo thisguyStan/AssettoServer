@@ -12,6 +12,7 @@ using AssettoServer.Server.Configuration;
 using AssettoServer.Server.Weather.Implementation;
 using AssettoServer.Server.Whitelist;
 using AssettoServer.Shared.Network.Packets.Outgoing;
+using AssettoServer.Shared.Network.Packets.Shared;
 using AssettoServer.Shared.Utils;
 using AssettoServer.Shared.Weather;
 using AssettoServer.Utils;

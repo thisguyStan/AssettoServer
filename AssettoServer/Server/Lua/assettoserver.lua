@@ -282,3 +282,7 @@ local resetCarControl = ac.ControlButton('__EXT_CMD_RESET', nil)
 resetCarControl:onPressed(function() requestResetCarEvent({}) end)
 
 luaReadyEvent({})
+
+function script.update()
+    ac.debug('isAdmin', sim.isAdmin)
+end

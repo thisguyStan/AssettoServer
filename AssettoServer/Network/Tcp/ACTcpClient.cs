@@ -68,7 +68,7 @@ public class ACTcpClient : IClient
     public int? CSPVersion { get; private set; }
     internal string ApiKey { get; }
     public List<string> CSPFeatures { get; private set; } = [];
-    public CSPPermission CSPPermission { get; private set; }
+    public CSPPermission CSPPermissions { get; private set; }
 
     private static ThreadLocal<byte[]> UdpSendBuffer { get; } = new(() => GC.AllocateArray<byte>(1500, true));
     private byte[] TcpSendBuffer { get; }
@@ -921,8 +921,6 @@ public class ACTcpClient : IClient
                 });
             }
 
-            _ = UpdateExplicitAdminState();
-
             _entryCarManager.BroadcastPacket(CreateLapCompletedPacket(0xFF, 0, 0));
             FirstUpdateSent?.Invoke(this, EventArgs.Empty);
         }
@@ -1023,42 +1021,41 @@ public class ACTcpClient : IClient
         if (IsAdministrator) return;
         
         IsAdministrator = true;
+        _ = UpdateExplicitAdminState();
         LoggedInAsAdministrator?.Invoke(this, EventArgs.Empty);
     }
 
     internal void FireLuaReady()
     {
+        _ = UpdateExplicitAdminState();
         LuaReady?.Invoke(this, EventArgs.Empty);
     }
 
     public void SendChatMessage(string message, byte senderId = 255) => SendPacket(new ChatMessage { Message = message, SessionId = senderId });
 
-    public async Task UpdateExplicitAdminState()
+    public async Task UpdateExplicitAdminState(CSPPermission permissions = 0)
     {
-        CSPPermission newPerms = 0;
-        
         if (IsAdministrator)
         {
-            newPerms = CSPPermission.Admin;
+            permissions = CSPPermission.Admin;
         }
         else if (_configuration.Extra.UserGroupCommandPermissions != null)
         {
-            foreach (var permGroup in _configuration.Extra.UserGroupCommandPermissions)
+            foreach (var permissionUserGroup in _configuration.Extra.UserGroupCommandPermissions)
             {
-                if (_userGroupManager.TryResolve(permGroup.UserGroup, out var group)
+                if (_userGroupManager.TryResolve(permissionUserGroup.UserGroup, out var group)
                     && await group.ContainsAsync(Guid))
                 {
-                    newPerms = permGroup.CSPPermissions.Aggregate(newPerms, (current, perm) => current | perm);
+                    permissions = permissionUserGroup.CSPPermissions.Aggregate(permissions, (current, perm) => current | perm);
                 }
             }
         }
 
-        if (CSPPermission == newPerms) return;
+        // if (CSPPermissions == permissions) return;
 
-        CSPPermission = newPerms;
         SendPacket(new CSPExplicitAdminState
         {
-            Permission = CSPPermission
+            Permission = CSPPermissions = permissions
         });
     }
 

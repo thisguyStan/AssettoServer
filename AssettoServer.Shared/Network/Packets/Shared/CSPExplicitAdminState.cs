@@ -1,20 +1,26 @@
-﻿using AssettoServer.Shared.Network.Packets.Shared;
+﻿using AssettoServer.Shared.Network.Packets.Outgoing;
 
-namespace AssettoServer.Shared.Network.Packets.Outgoing;
+namespace AssettoServer.Shared.Network.Packets.Shared;
 
-public class CSPExplicitAdminState : IOutgoingNetworkPacket
+public class CSPExplicitAdminState : CSPClientMessageOutgoing
 {
     public CSPPermission Permission;
 
-    public void ToWriter(ref PacketWriter writer)
+    public CSPExplicitAdminState()
     {
-        writer.Write((byte)ACServerProtocol.Extended);
-        writer.Write((ushort)CSPClientMessageType.ExplicitAdminState);
+        Type = CSPClientMessageType.ExplicitAdminState;
+    }
+
+    protected override void ToWriter(BinaryWriter writer)
+    {
         writer.Write((ushort)Permission);
-        writer.Write((ushort)0); // Currently unused buffer
+        writer.Write((ushort)1); // Currently unused buffer
     }
 }
 
+/// <summary>
+/// except for None and Admin these are just ideas and basically unused
+/// </summary>
 [Flags]
 public enum CSPPermission : ushort
 {

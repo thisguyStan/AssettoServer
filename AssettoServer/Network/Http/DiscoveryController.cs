@@ -1,9 +1,8 @@
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using AssettoServer.Commands.Attributes;
 using AssettoServer.Shared.Network.Http.Responses;
-using DotNext;
+using AssettoServer.Shared.Network.Packets.Shared;
 using Microsoft.AspNetCore.Mvc;
 using Qmmands;
 
@@ -40,7 +39,7 @@ public class DiscoveryController : ControllerBase
             {
                 Command = command.Name,
                 Arguments = args.Count > 0 ? args : null,
-                RequiredPermission = admin?.Permission ?? parentAdmin?.Permission ?? 0,
+                RequiredPermission = admin?.Permission ?? parentAdmin?.Permission ?? CSPPermission.None,
                 Description = string.IsNullOrEmpty(description) ? null : description
             });
         }

@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using AssettoServer.Shared.Network.Packets.Outgoing;
+using AssettoServer.Shared.Network.Packets.Shared;
 using JetBrains.Annotations;
 
 namespace AssettoServer.Server.Configuration.Extra;

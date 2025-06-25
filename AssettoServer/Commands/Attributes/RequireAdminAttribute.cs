@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using AssettoServer.Commands.Contexts;
 using AssettoServer.Server.Configuration;
 using AssettoServer.Server.UserGroup;
-using AssettoServer.Shared.Network.Packets.Outgoing;
+using AssettoServer.Shared.Network.Packets.Shared;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace AssettoServer.Commands.Attributes;

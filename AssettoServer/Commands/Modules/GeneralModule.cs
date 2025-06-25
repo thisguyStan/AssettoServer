@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using AssettoServer.Commands.Attributes;
 using AssettoServer.Server.Configuration;
 using AssettoServer.Server.Weather;
+using AssettoServer.Shared.Network.Packets.Shared;
 using AssettoServer.Utils;
 using JetBrains.Annotations;
 using Serilog;
@@ -55,6 +56,13 @@ public class GeneralModule : ACModuleBase
         }
         else
             Reply("Command refused");
+    }
+    
+    // TODO remove again after testing
+    [Command("adminv2"), RequireConnectedPlayer]
+    public async Task AdminV2Async(ushort? perms = null)
+    {
+        await Client!.UpdateExplicitAdminState((CSPPermission?)perms ?? CSPPermission.Admin);
     }
 
     [Command("legal")]
