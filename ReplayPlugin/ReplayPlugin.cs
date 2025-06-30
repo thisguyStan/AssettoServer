@@ -68,7 +68,7 @@ public class ReplayPlugin : BackgroundService
         int numAiMappings = 0;
         foreach (var car in _entryCarManager.EntryCars)
         {
-            if (car.Client is IConnectableClient {HasSentFirstUpdate: true})
+            if (car is IEntryCar<IClient> { Client.HasSentFirstUpdate: true })
             {
                 _state.PlayerCars.Add((car.SessionId, car.Status));
                 _state.AiFrameMapping.Add(car.SessionId, new List<short>());

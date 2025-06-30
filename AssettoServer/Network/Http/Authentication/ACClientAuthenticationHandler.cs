@@ -36,20 +36,20 @@ public class ACClientAuthenticationHandler : AuthenticationHandler<ACClientAuthe
         }
         var apiKey = apiKeyHdr.ToString();
 
-        if (_entryCarManager.EntryCars[carId].Client is ACTcpClient client && client.ApiKey == apiKey)
+        if (_entryCarManager.EntryCars[carId] is EntryCar { Client: not null } car && car.Client.ApiKey == apiKey)
         {
             var claims = new List<Claim>
             {
-                new(ClaimTypes.NameIdentifier, client.Guid.ToString()),
-                new(ClaimTypes.Name, client.Name!)
+                new(ClaimTypes.NameIdentifier, car.Client.Guid.ToString()),
+                new(ClaimTypes.Name, car.Client.Name!)
             };
 
-            if (client is { IsAdministrator: true })
+            if (car.Client is { IsAdministrator: true })
             {
                 claims.Add(new Claim(ClaimTypes.Role, "Administrator"));
             }
 
-            var claimsIdentity = new ACClientClaimsIdentity(claims, nameof(ACClientAuthenticationHandler)) { Client = client };
+            var claimsIdentity = new ACClientClaimsIdentity(claims, nameof(ACClientAuthenticationHandler)) { Client = car.Client };
             var ticket = new AuthenticationTicket(new ClaimsPrincipal(claimsIdentity), Scheme.Name);
             return Task.FromResult(AuthenticateResult.Success(ticket));
         }

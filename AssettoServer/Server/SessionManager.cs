@@ -271,7 +271,7 @@ public class SessionManager : BackgroundService, IHostedLifecycleService
             return false;
         }
 
-        var connectedCount = _entryCarManager.EntryCars.Count(e => e.Client != null);
+        var connectedCount = _entryCarManager.EntryCars.OfType<EntryCar>().Count(e => e.Client != null);
 
         if (CurrentSession.Configuration.Type != SessionType.Race)
         {
@@ -303,7 +303,7 @@ public class SessionManager : BackgroundService, IHostedLifecycleService
 
     private void CalcOverTime()
     {
-        if (_entryCarManager.EntryCars.All(c => c.Client == null))
+        if (_entryCarManager.EntryCars.OfType<EntryCar>().All(c => c.Client == null))
         {
             CurrentSession.OverTimeMilliseconds = 0;
             return;
@@ -317,7 +317,7 @@ public class SessionManager : BackgroundService, IHostedLifecycleService
 
             if (CurrentSession.OverTimeMilliseconds == overTimeMilliseconds)
             {
-                if (_entryCarManager.EntryCars.Where(c => c.Client is IConnectableClient { HasSentFirstUpdate: true })
+                if (_entryCarManager.EntryCars.OfType<EntryCar>().Where(c => c.Client is { HasSentFirstUpdate: true })
                     .Any(car => CurrentSession.Results?[car.SessionId] is { HasCompletedLastLap: false }))
                 {
                     return;
@@ -331,7 +331,8 @@ public class SessionManager : BackgroundService, IHostedLifecycleService
                 CurrentSession.OverTimeMilliseconds = overTimeMilliseconds;
 
             if (_entryCarManager.EntryCars
-                .Where(c => c.Client is IConnectableClient { HasSentFirstUpdate: true })
+                .OfType<EntryCar>()
+                .Where(c => c.Client is { HasSentFirstUpdate: true })
                 .Any(car => CurrentSession.Results?[car.SessionId] is { HasCompletedLastLap: false }
                             && car.Status.Velocity.LengthSquared() > 5))
             {
@@ -363,8 +364,9 @@ public class SessionManager : BackgroundService, IHostedLifecycleService
         CurrentSession.Results = new Dictionary<byte, EntryCarResult>();
         CurrentSession.StartTimeMilliseconds = ServerTimeMilliseconds;
 
-        foreach (var entryCar in _entryCarManager.EntryCars)
+        foreach (var car in _entryCarManager.EntryCars)
         {
+            if (car is not EntryCar entryCar) continue;
             CurrentSession.Results?.Add(entryCar.SessionId, new EntryCarResult(entryCar.Client));
         }
 
@@ -430,7 +432,8 @@ public class SessionManager : BackgroundService, IHostedLifecycleService
     public bool RestartSession()
     {
         // StallSessionSwitch
-        if (_entryCarManager.EntryCars.Any(c => c.Client is IConnectableClient { HasSentFirstUpdate: false }))
+        // Check if oftype will cause issues with spectator clients
+        if (_entryCarManager.EntryCars.OfType<EntryCar>().Any(c => c.Client is { HasSentFirstUpdate: false }))
             return false;
 
         SetSession(CurrentSessionIndex);
@@ -440,7 +443,8 @@ public class SessionManager : BackgroundService, IHostedLifecycleService
     public bool NextSession()
     {
         // StallSessionSwitch
-        if (_entryCarManager.EntryCars.Any(c => c.Client is IConnectableClient { HasSentFirstUpdate: false }))
+        // Check if oftype will cause issues with spectator clients
+        if (_entryCarManager.EntryCars.OfType<EntryCar>().Any(c => c.Client is { HasSentFirstUpdate: false }))
             return false;
 
         MustInvertGrid = false;
@@ -491,7 +495,7 @@ public class SessionManager : BackgroundService, IHostedLifecycleService
 
         if (target == null)
         {
-            foreach (var car in _entryCarManager.EntryCars.Where(c => c is EntryCar { Client.HasSentFirstUpdate: true }).Select(c => (EntryCar)c))
+            foreach (var car in _entryCarManager.EntryCars.OfType<EntryCar>().Where(c => c is { Client.HasSentFirstUpdate: true }))
             {
                 packet.StartTime = CurrentSession.StartTimeMilliseconds - car.TimeOffset;
                 car.Client?.SendPacket(packet);
@@ -508,7 +512,7 @@ public class SessionManager : BackgroundService, IHostedLifecycleService
         if (ServerTimeMilliseconds >= CurrentSession.StartTimeMilliseconds + 5000
             && ServerTimeMilliseconds - CurrentSession.LastRaceStartUpdateMilliseconds <= 1000) return;
 
-        foreach (var car in _entryCarManager.EntryCars.Where(c => c is EntryCar { Client.HasSentFirstUpdate: true }).Select(c => (EntryCar)c))
+        foreach (var car in _entryCarManager.EntryCars.OfType<EntryCar>().Where(c => c is { Client.HasSentFirstUpdate: true }))
         {
             car.Client?.SendPacketUdp(new RaceStart()
             {

@@ -23,8 +23,9 @@ public class ReportController : ControllerBase
     [HttpPost("/report")]
     public async Task<ActionResult> PostReport(Guid key, [FromHeader(Name = "X-Car-Index")] int sessionId)
     {
-        if (_entryCarManager.EntryCars[sessionId].Client is not ACTcpClient reporterClient)
+        if (_entryCarManager.EntryCars[sessionId] is not EntryCar { Client: not null } reporterCar)
             throw new InvalidOperationException("Client not connected");
+        var reporterClient = reporterCar.Client;
         var lastReport = _plugin.GetLastReplay(reporterClient);
 
         if (_plugin.Key != key

@@ -15,7 +15,7 @@ public abstract class OpenSlotFilterBase : IOpenSlotFilter
         _nextFilter = next;
     }
 
-    public virtual async ValueTask<bool> IsSlotOpen(IEntryCar<IClient> entryCar, ulong guid)
+    public virtual async ValueTask<bool> IsSlotOpen(IEntryCar entryCar, ulong guid)
     {
         if (_nextFilter == null)
             return true;

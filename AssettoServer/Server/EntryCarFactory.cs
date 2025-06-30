@@ -18,7 +18,7 @@ public class EntryCarFactory : IEntryCarFactory
         _configuration = configuration;
     }
     
-    public IEntryCar<IClient> Create(IEntry entry, byte sessionId)
+    public IEntryCar Create(IEntry entry, byte sessionId)
     {
         var car = _entryCarFactory(entry.Model, entry.Skin, sessionId);
         

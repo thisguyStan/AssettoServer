@@ -13,6 +13,7 @@ using AssettoServer.Server.Whitelist;
 using AssettoServer.Shared.Model;
 using AssettoServer.Shared.Network.Packets.Outgoing;
 using AssettoServer.Shared.Network.Packets.Shared;
+using AssettoServer.Shared.Utils;
 using AssettoServer.Utils;
 using Microsoft.Extensions.Hosting;
 using Prometheus;
@@ -148,7 +149,7 @@ public class ACServer : BackgroundService, IHostedLifecycleService
         int failedUpdateLoops = 0;
         int sleepMs = 1000 / _configuration.Server.RefreshRateHz;
         long nextTick = _sessionManager.ServerTimeMilliseconds;
-        Dictionary<IEntryCar<IClient>, CountedArray<PositionUpdateOut>> positionUpdates = new();
+        Dictionary<IEntryCar, CountedArray<PositionUpdateOut>> positionUpdates = new();
         foreach (var entryCar in _entryCarManager.EntryCars)
         {
             positionUpdates[entryCar] = new CountedArray<PositionUpdateOut>(_entryCarManager.EntryCars.Length);
@@ -172,7 +173,7 @@ public class ACServer : BackgroundService, IHostedLifecycleService
                     for (int i = 0; i < _entryCarManager.EntryCars.Length; i++)
                     {
                         var fromCar = _entryCarManager.EntryCars[i];
-                        if (fromCar is EntryCar {Client.HasSentFirstUpdate: true} fromPlayerCar && (_sessionManager.ServerTimeMilliseconds - fromPlayerCar.LastPingTime) > 1000)
+                        if (fromCar is IEntryCar<IClient> {Client.HasSentFirstUpdate: true} fromPlayerCar && (_sessionManager.ServerTimeMilliseconds - fromPlayerCar.LastPingTime) > 1000)
                         {
                             fromPlayerCar.LastPingTime = _sessionManager.ServerTimeMilliseconds;
                             fromPlayerCar.Client.SendPacketUdp(new PingUpdate((uint)fromPlayerCar.LastPingTime, fromPlayerCar.Ping));
@@ -191,12 +192,15 @@ public class ACServer : BackgroundService, IHostedLifecycleService
                             for (int j = 0; j < _entryCarManager.EntryCars.Length; j++)
                             {
                                 var toCar = _entryCarManager.EntryCars[j];
-                                var toClient = toCar.Client;
-                                if (toCar == fromCar 
-                                    || toClient == null || toClient is IConnectableClient { HasSentFirstUpdate: false } || toClient is IConnectableClient { HasUdpEndpoint: true }
-                                    || !fromCar.GetPositionUpdateForCar(toCar, out var update)) continue;
 
-                                if (toClient is IConnectableClient { SupportsCSPCustomUpdate: true } || fromCar.AiControlled)
+                                if (toCar is not EntryCar toEntryCar) continue;
+                                
+                                var toClient = toEntryCar.Client;
+                                if (toCar == fromCar 
+                                    || toClient == null || toClient is { HasSentFirstUpdate: false } || toClient is { HasUdpEndpoint: true }
+                                    || !fromCar.GetPositionUpdateForCar(toEntryCar, out var update)) continue;
+
+                                if (toClient is { SupportsCSPCustomUpdate: true } || fromCar.AiControlled)
                                 {
                                     positionUpdates[toCar].Add(update);
                                 }
@@ -211,14 +215,15 @@ public class ACServer : BackgroundService, IHostedLifecycleService
                     foreach (var (toCar, updates) in positionUpdates)
                     {
                         if (updates.Count == 0) continue;
-                            
-                        var toClient = toCar.Client;
+                        
+                        if (toCar is not EntryCar toEntryCar) continue;
+                        var toClient = toEntryCar.Client;
                         if (toClient != null)
                         {
                             const int chunkSize = 20;
                             for (int i = 0; i < updates.Count; i += chunkSize)
                             {
-                                if (toClient is IConnectableClient { SupportsCSPCustomUpdate: true })
+                                if (toClient is { SupportsCSPCustomUpdate: true })
                                 {
                                     var packet = new CSPPositionUpdate(new ArraySegment<PositionUpdateOut>(updates.Array, i, Math.Min(chunkSize, updates.Count - i)));
                                     toClient.SendPacketUdp(in packet);

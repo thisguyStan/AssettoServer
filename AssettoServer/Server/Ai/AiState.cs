@@ -417,16 +417,16 @@ public class AiState : IDisposable
         return false;
     }
 
-    private (EntryCar? entryCar, float distance) FindClosestPlayerObstacle()
+    private (IEntryCar<IClient>? entryCar, float distance) FindClosestPlayerObstacle()
     {
         if (!ShouldIgnorePlayerObstacles())
         {
-            EntryCar? closestCar = null;
+            IEntryCar<IClient>? closestCar = null;
             float minDistance = float.MaxValue;
             for (var i = 0; i < _entryCarManager.EntryCars.Length; i++)
             {
                 var iteratedCar = _entryCarManager.EntryCars[i];
-                if (iteratedCar is EntryCar {Client.HasSentFirstUpdate: true} playerCar)
+                if (iteratedCar is IEntryCar<IClient> {Client.HasSentFirstUpdate: true} playerCar)
                 {
                     float distance = Vector3.DistanceSquared(playerCar.Status.Position, Status.Position);
 

@@ -26,7 +26,7 @@ public class OpenSlotFilterChain
         if (_first == null) throw new InvalidOperationException("No open slot filters set");
     }
     
-    public async ValueTask<bool> IsSlotOpen(IEntryCar<IClient> entryCar, ulong guid)
+    public async ValueTask<bool> IsSlotOpen(IEntryCar entryCar, ulong guid)
     {
         return await _first.IsSlotOpen(entryCar, guid);
     }

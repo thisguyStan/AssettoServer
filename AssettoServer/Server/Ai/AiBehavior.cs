@@ -454,7 +454,7 @@ public class AiBehavior : BackgroundService
 
     private void AdjustOverbooking()
     {
-        int playerCount = _entryCarManager.EntryCars.Count(car => car.Client is IConnectableClient { IsConnected: true });
+        int playerCount = _entryCarManager.EntryCars.OfType<EntryCar>().Count(car => car.Client is { IsConnected: true });
         var aiSlots = _entryCarManager.EntryCars.OfType<EntryCar>().Where(car => car.Client == null && car.AiControlled).ToList(); // client null check is necessary here so that slots where someone is connecting don't count
 
         if (aiSlots.Count == 0)

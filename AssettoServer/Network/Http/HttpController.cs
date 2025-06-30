@@ -10,6 +10,7 @@ using AssettoServer.Server.Configuration;
 using AssettoServer.Server.GeoParams;
 using AssettoServer.Server.OpenSlotFilters;
 using AssettoServer.Server.Weather;
+using AssettoServer.Shared.Model;
 using AssettoServer.Shared.Network.Http.Responses;
 using AssettoServer.Shared.Weather;
 using Microsoft.AspNetCore.Cors;
@@ -102,15 +103,27 @@ public class HttpController : ControllerBase
         var cars = new List<EntryListResponseCar>(_entryCarManager.EntryCars.Length);
         foreach (var ec in _entryCarManager.EntryCars)
         {
-            cars.Add(new EntryListResponseCar
+            if (ec is IEntryCar<IClient> { Client: not null } playerCar)
             {
-                Model = ec.Model,
-                Skin = ec.Skin,
-                IsEntryList = isAdmin || await _openSlotFilter.IsSlotOpen(ec, ulongGuid),
-                DriverName = ec.Client?.Name,
-                DriverTeam = ec.Client?.Team,
-                IsConnected = ec.Client != null
-            });
+                cars.Add(new EntryListResponseCar
+                {
+                    Model = ec.Model,
+                    Skin = ec.Skin,
+                    IsEntryList = isAdmin || await _openSlotFilter.IsSlotOpen(ec, ulongGuid),
+                    DriverName = playerCar.Client?.Name,
+                    DriverTeam = playerCar.Client?.Team,
+                    IsConnected = true
+                });
+            }
+            else
+            {
+                cars.Add(new EntryListResponseCar
+                {
+                    Model = ec.Model,
+                    Skin = ec.Skin,
+                    IsEntryList = isAdmin || await _openSlotFilter.IsSlotOpen(ec, ulongGuid),
+                });
+            }
         }
         EntryListResponse responseObj = new EntryListResponse
         {
@@ -131,17 +144,30 @@ public class HttpController : ControllerBase
         var cars = new List<DetailResponseCar>(_entryCarManager.EntryCars.Length);
         foreach (var ec in _entryCarManager.EntryCars)
         {
-            cars.Add(new DetailResponseCar
+            if (ec is IEntryCar<IClient> { Client: not null } playerCar)
             {
-                Model = ec.Model,
-                Skin = ec.Skin,
-                IsEntryList = isAdmin || await _openSlotFilter.IsSlotOpen(ec, ulongGuid),
-                DriverName = ec.Client?.Name,
-                DriverTeam = ec.Client?.Team,
-                DriverNation = ec.Client?.NationCode,
-                IsConnected = ec.Client != null,
-                ID = ec.Client is ACTcpClient playerClient ? playerClient.HashedGuid : null
-            });
+                cars.Add(new DetailResponseCar
+                {
+                    Model = ec.Model,
+                    Skin = ec.Skin,
+                    IsEntryList = isAdmin || await _openSlotFilter.IsSlotOpen(ec, ulongGuid),
+                    DriverName = playerCar.Client?.Name,
+                    DriverTeam = playerCar.Client?.Team,
+                    DriverNation = playerCar.Client?.NationCode,
+                    IsConnected = true,
+                    ID = playerCar.Client?.HashedGuid
+                });
+            }
+            else
+            {
+                cars.Add(new DetailResponseCar
+                {
+                    Model = ec.Model,
+                    Skin = ec.Skin,
+                    IsEntryList = isAdmin || await _openSlotFilter.IsSlotOpen(ec, ulongGuid),
+                    IsConnected = false,
+                });
+            }
         }
         
         DetailResponse responseObj = new DetailResponse

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using AssettoServer.Commands.Attributes;
 using AssettoServer.Server.Configuration;
 using AssettoServer.Server.Weather;
+using AssettoServer.Shared.Utils;
 using AssettoServer.Utils;
 using JetBrains.Annotations;
 using Serilog;

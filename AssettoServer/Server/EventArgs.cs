@@ -74,12 +74,12 @@ public class SessionChangedEventArgs : EventArgs
 
 public class CollisionEventArgs : EventArgs
 {
-    public IEntryCar<IClient>? TargetCar { get; }
+    public IEntryCar? TargetCar { get; }
     public float Speed { get; }
     public Vector3 Position { get; }
     public Vector3 RelPosition { get; }
 
-    public CollisionEventArgs(IEntryCar<IClient>? targetCar, float speed, Vector3 position, Vector3 relPosition)
+    public CollisionEventArgs(IEntryCar? targetCar, float speed, Vector3 position, Vector3 relPosition)
     {
         TargetCar = targetCar;
         Speed = speed;

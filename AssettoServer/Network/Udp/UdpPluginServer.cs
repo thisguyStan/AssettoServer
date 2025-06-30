@@ -9,6 +9,7 @@ using AssettoServer.Server;
 using AssettoServer.Server.Configuration;
 using AssettoServer.Server.Configuration.Kunos;
 using AssettoServer.Server.Weather;
+using AssettoServer.Shared.Model;
 using AssettoServer.Shared.Network.Packets;
 using AssettoServer.Shared.Network.Packets.Outgoing;
 using AssettoServer.Shared.Network.Packets.Shared;
@@ -246,7 +247,8 @@ public class UdpPluginServer : BackgroundService
                     {
                         byte destSessId = message.SessionId;
                         message.SessionId = 0xFF;
-                        _entryCarManager.EntryCars[destSessId].Client?.SendPacket(message);
+                        if (_entryCarManager.EntryCars[destSessId] is IEntryCar<IClient> destinationCar)
+                            destinationCar.Client?.SendPacket(message);
                     }
                     else
                     {

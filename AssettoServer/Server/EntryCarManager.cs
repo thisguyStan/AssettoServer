@@ -19,7 +19,7 @@ namespace AssettoServer.Server;
 
 public class EntryCarManager
 {
-    public IEntryCar<IClient>[] EntryCars { get; private set; } = [];
+    public IEntryCar[] EntryCars { get; private set; } = [];
     public ConcurrentDictionary<int, EntryCar> ConnectedCars { get; } = new();
 
     private readonly ACServerConfiguration _configuration;
@@ -148,13 +148,13 @@ public class EntryCarManager
         }
     }
 
-    public void BroadcastPacket<TPacket>(TPacket packet, ACTcpClient? sender = null) where TPacket : IOutgoingNetworkPacket
+    public void BroadcastPacket<TPacket>(TPacket packet, IClient? sender = null) where TPacket : IOutgoingNetworkPacket
     {
         foreach (var car in EntryCars)
         {
-            if (car.Client is IConnectableClient { HasSentFirstUpdate: true } client && client != sender)
+            if (car is IEntryCar<IClient> { Client.HasSentFirstUpdate: true } entryCar && entryCar.Client != sender)
             {
-                client.SendPacket(packet);
+                entryCar.Client.SendPacket(packet);
             }
         }
     }
@@ -166,11 +166,11 @@ public class EntryCarManager
     {
         foreach (var car in EntryCars)
         {
-            if (car is EntryCar { Client: { HasSentFirstUpdate: true, UdpEndpoint: not null } } entryCar
-                && (!skipSender || car.Client != sender)
+            if (car is IEntryCar<IClient> { Client: { HasSentFirstUpdate: true, HasUdpEndpoint: true } } entryCar
+                && (!skipSender || entryCar.Client != sender)
                 && (!range.HasValue || (sender != null && sender.EntryCar.IsInRange(entryCar, range.Value))))
             {
-                car.Client?.SendPacketUdp(in packet);
+                entryCar.Client?.SendPacketUdp(in packet);
             }
         }
     }
@@ -203,7 +203,7 @@ public class EntryCarManager
             }
             else
             {
-                candidates = EntryCars.Where(c => c.Model == handshakeRequest.RequestedCar && c is EntryCar).Select(c => (EntryCar)c);
+                candidates = EntryCars.OfType<EntryCar>().Where(c => c.Model == handshakeRequest.RequestedCar);
             }
 
             var isAdmin = await _adminService.IsAdminAsync(handshakeRequest.Guid);
@@ -240,7 +240,7 @@ public class EntryCarManager
 
     internal void Initialize()
     {
-        EntryCars = new IEntryCar<IClient>[Math.Min(_configuration.Server.MaxClients, _configuration.EntryList.Cars.Count)];
+        EntryCars = new IEntryCar[Math.Min(_configuration.Server.MaxClients, _configuration.EntryList.Cars.Count)];
         Log.Information("Loaded {Count} cars", EntryCars.Length);
         for (int i = 0; i < EntryCars.Length; i++)
         {
