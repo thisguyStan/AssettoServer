@@ -3,16 +3,16 @@ using System.Linq;
 using AssettoServer.Server.Configuration;
 using AssettoServer.Shared.Model;
 
-namespace AssettoServer.Server;
+namespace TrafficAiPlugin;
 
-public class EntryCarFactory : IEntryCarFactory
+public class EntryCarTrafficAiFactory : IEntryCarFactory
 {
-    public string ClientType => "DEFAULT";
+    public string ClientType => "TRAFFICAI";
 
-    private readonly EntryCar.Factory _entryCarFactory;
+    private readonly EntryCarTrafficAi.Factory _entryCarFactory;
     private readonly ACServerConfiguration _configuration;
 
-    public EntryCarFactory(EntryCar.Factory entryCarFactory, ACServerConfiguration configuration)
+    public EntryCarTrafficAiFactory(EntryCarTrafficAi.Factory entryCarFactory, ACServerConfiguration configuration)
     {
         _entryCarFactory = entryCarFactory;
         _configuration = configuration;

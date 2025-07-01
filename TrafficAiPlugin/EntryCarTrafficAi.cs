@@ -14,11 +14,40 @@ namespace TrafficAiPlugin;
 
 public class EntryCarTrafficAi : IEntryCarTrafficAi
 {
+    public CarStatus Status { get; private set; } = new();
+    public bool EnableCollisions { get; private set; } = true;
+
+    public bool ForceLights { get; internal set; }
+
+    public long LastActiveTime { get; internal set; }
+    public bool HasUpdateToSend { get; set; }
+    public int TimeOffset { get; internal set; }
+    public byte SessionId { get; }
+    public uint LastRemoteTimestamp { get; internal set; }
+    public long LastPingTime { get; set; }
+    public long LastPongTime { get; internal set; }
+    public ushort Ping { get; internal set; }
+    public DriverOptionsFlags DriverOptionsFlags { get; internal set; }
+    public string LegalTyres { get; set; } = "";
+    public bool IsSpectator { get; internal set; }
+    public string Model { get; }
+    public string Skin { get; }
+    public int SpectatorMode { get; internal set; }
+    public float Ballast { get; internal set; }
+    public int Restrictor { get; internal set; }
+    public string? FixedSetup { get; internal set; }
+    public List<ulong> AllowedGuids { get; internal set; } = new();
+    public bool AiControlled { get; set; } = false;
+    public AiMode AiMode { get; set; } = AiMode.None;
+    public string? AiName { get; set; }
+    
+    
+    
     public int TargetAiStateCount { get; private set; } = 1;
     public byte[] LastSeenAiSpawn { get; }
     public byte[] AiPakSequenceIds { get; }
     public IAiState?[] LastSeenAiState { get; }
-    public bool AiEnableColorChanges => EntryCar.DriverOptionsFlags.HasFlag(DriverOptionsFlags.AllowColorChange);
+    public bool AiEnableColorChanges => DriverOptionsFlags.HasFlag(DriverOptionsFlags.AllowColorChange);
     public int AiIdleEngineRpm { get; set; } = 800;
     public int AiMaxEngineRpm { get; set; } = 3000;
     public float AiAcceleration { get; set; }
@@ -45,8 +74,8 @@ public class EntryCarTrafficAi : IEntryCarTrafficAi
     
     private readonly Func<EntryCarTrafficAi, AiState> _aiStateFactory;
     private readonly TrafficAi _trafficAi;
-
-    public EntryCar EntryCar { get; }
+    
+    public delegate EntryCar Factory(string model, string? skin, byte sessionId);
     
     private readonly ACServerConfiguration _serverConfiguration;
     private readonly TrafficAiConfiguration _configuration;
@@ -54,8 +83,7 @@ public class EntryCarTrafficAi : IEntryCarTrafficAi
     private readonly SessionManager _sessionManager;
     private readonly AiSpline _aiSpline;
 
-    public EntryCarTrafficAi(EntryCar entryCar,
-        TrafficAiConfiguration configuration,
+    public EntryCarTrafficAi(TrafficAiConfiguration configuration,
         EntryCarManager entryCarManager,
         SessionManager sessionManager,
         ACServerConfiguration serverConfiguration,
@@ -63,7 +91,6 @@ public class EntryCarTrafficAi : IEntryCarTrafficAi
         TrafficAi trafficAi,
         AiSpline aiSpline)
     {
-        EntryCar = entryCar;
         _configuration = configuration;
         _entryCarManager = entryCarManager;
         _sessionManager = sessionManager;
@@ -73,7 +100,7 @@ public class EntryCarTrafficAi : IEntryCarTrafficAi
         _aiSpline = aiSpline;
         
         AiPakSequenceIds = new byte[entryCarManager.EntryCars.Length];
-        LastSeenAiState = new AiState[entryCarManager.EntryCars.Length];
+        LastSeenAiState = new IAiState[entryCarManager.EntryCars.Length];
         LastSeenAiSpawn = new byte[entryCarManager.EntryCars.Length];
         
         AiInit();
@@ -81,7 +108,7 @@ public class EntryCarTrafficAi : IEntryCarTrafficAi
 
     private void AiInit()
     {
-        EntryCar.AiName = $"{_configuration.NamePrefix} {EntryCar.SessionId}";
+        AiName = $"{_configuration.NamePrefix} {SessionId}";
         SetAiOverbooking(0);
 
         _configuration.PropertyChanged += OnConfigReload;
@@ -104,7 +131,7 @@ public class EntryCarTrafficAi : IEntryCarTrafficAi
 
         foreach (var carOverrides in _configuration.CarSpecificOverrides)
         {
-            if (carOverrides.Model == EntryCar.Model)
+            if (carOverrides.Model == Model)
             {
                 if (carOverrides.SplineHeightOffsetMeters.HasValue)
                     AiSplineHeightOffsetMeters = carOverrides.SplineHeightOffsetMeters.Value;
@@ -162,7 +189,7 @@ public class EntryCarTrafficAi : IEntryCarTrafficAi
                     && (_configuration.TwoWayTraffic || Vector3.Dot(aiState.Status.Velocity, targetAiState.Status.Velocity) > 0))
                 {
                     aiState.Despawn();
-                    EntryCar.Logger.Verbose("Removed close state from AI {SessionId}", EntryCar.SessionId);
+                    Logger.Verbose("Removed close state from AI {SessionId}", SessionId);
                 }
             }
         }
@@ -285,12 +312,12 @@ public class EntryCarTrafficAi : IEntryCarTrafficAi
             aiState.Dispose();
             _aiStates.Remove(aiState);
 
-            EntryCar.Logger.Verbose("Removed state of Traffic {SessionId} due to overbooking reduction", EntryCar.SessionId);
+            Logger.Verbose("Removed state of Traffic {SessionId} due to overbooking reduction", SessionId);
 
             if (_aiStates.Count == 0)
             {
-                EntryCar.Logger.Verbose("Traffic {SessionId} has no states left, disconnecting", EntryCar.SessionId);
-                _entryCarManager.BroadcastPacket(new CarDisconnected { SessionId = EntryCar.SessionId });
+                Logger.Verbose("Traffic {SessionId} has no states left, disconnecting", SessionId);
+                _entryCarManager.BroadcastPacket(new CarDisconnected { SessionId = SessionId });
             }
 
             return false;
@@ -311,41 +338,41 @@ public class EntryCarTrafficAi : IEntryCarTrafficAi
 
     public void SetAiControl(bool aiControlled)
     {
-        if (EntryCar.AiControlled == aiControlled) return;
+        if (AiControlled == aiControlled) return;
         
-        EntryCar.AiControlled = aiControlled;
-        if (EntryCar.AiControlled)
+        AiControlled = aiControlled;
+        if (AiControlled)
         {
-            EntryCar.Logger.Debug("Slot {SessionId} is now controlled by AI", EntryCar.SessionId);
+            Logger.Debug("Slot {SessionId} is now controlled by AI", SessionId);
 
             AiReset();
             _entryCarManager.BroadcastPacket(new CarConnected
             {
-                SessionId = EntryCar.SessionId,
-                Name = EntryCar.AiName
+                SessionId = SessionId,
+                Name = AiName
             });
             if (_configuration.HideAiCars)
             {
                 _entryCarManager.BroadcastPacket(new CSPCarVisibilityUpdate
                 {
-                    SessionId = EntryCar.SessionId,
+                    SessionId = SessionId,
                     Visible = CSPCarVisibility.Invisible
                 });
             }
         }
         else
         {
-            EntryCar.Logger.Debug("Slot {SessionId} is no longer controlled by AI", EntryCar.SessionId);
+            Logger.Debug("Slot {SessionId} is no longer controlled by AI", SessionId);
             if (_aiStates.Count > 0)
             {
-                _entryCarManager.BroadcastPacket(new CarDisconnected { SessionId = EntryCar.SessionId });
+                _entryCarManager.BroadcastPacket(new CarDisconnected { SessionId = SessionId });
             }
 
             if (_configuration.HideAiCars)
             {
                 _entryCarManager.BroadcastPacket(new CSPCarVisibilityUpdate
                 {
-                    SessionId = EntryCar.SessionId,
+                    SessionId = SessionId,
                     Visible = CSPCarVisibility.Visible
                 });
             }
@@ -382,37 +409,8 @@ public class EntryCarTrafficAi : IEntryCarTrafficAi
         _aiStates.Clear();
         _aiStates.Add(_aiStateFactory(this));
     }
-
-    public bool TryResetPosition()
-    {
-        if (_sessionManager.ServerTimeMilliseconds < _sessionManager.CurrentSession.StartTimeMilliseconds + 20_000 
-            || (_sessionManager.ServerTimeMilliseconds > _sessionManager.CurrentSession.EndTimeMilliseconds
-                && _sessionManager.CurrentSession.EndTimeMilliseconds > 0))
-            return false;
-        
-        EntryCar.SetCollisions(false);
-        
-        _ = Task.Run(async () =>
-        {
-            await Task.Delay(250);
-            
-            var (splinePointId, _) = _aiSpline.WorldToSpline(EntryCar.Status.Position);
-
-            var splinePoint = _aiSpline.Points[splinePointId];
-        
-            var position = splinePoint.Position;
-            var direction = - _aiSpline.Operations.GetForwardVector(splinePoint.NextId);
-            
-            EntryCar.Client?.SendTeleportCarPacket(position, direction);
-            await Task.Delay(10000);
-            EntryCar.SetCollisions(true);
-        });
     
-        EntryCar.Logger.Information("Reset position for {Player} ({SessionId})",EntryCar.Client?.Name, EntryCar.Client?.SessionId);
-        return true;
-    }
-    
-    public bool GetPositionUpdateForCar(EntryCar toCar, out PositionUpdateOut positionUpdateOut)
+    public bool GetPositionUpdateForCar(IEntryCar<IClient> toCar, out PositionUpdateOut positionUpdateOut)
     {
         CarStatus targetCarStatus;
         var toTargetCar = toCar.TargetCar;
@@ -434,7 +432,7 @@ public class EntryCarTrafficAi : IEntryCarTrafficAi
         }
 
         CarStatus status;
-        if (EntryCar.AiControlled)
+        if (AiControlled)
         {
             var aiState = GetBestStateForPlayer(targetCarStatus);
 
@@ -454,7 +452,7 @@ public class EntryCarTrafficAi : IEntryCarTrafficAi
                 {
                     toCar.Client?.SendPacket(new CSPCarColorUpdate
                     {
-                        SessionId = EntryCar.SessionId,
+                        SessionId = SessionId,
                         Color = aiState.Color
                     });
                 }
@@ -464,25 +462,25 @@ public class EntryCarTrafficAi : IEntryCarTrafficAi
         }
         else
         {
-            status = EntryCar.Status;
+            status = Status;
         }
 
         float distanceSquared = Vector3.DistanceSquared(status.Position, targetCarStatus.Position);
-        if (EntryCar.TargetCar != null || distanceSquared > EntryCar.NetworkDistanceSquared)
+        if (TargetCar != null || distanceSquared > NetworkDistanceSquared)
         {
-            if ((_sessionManager.ServerTimeMilliseconds - EntryCar.OtherCarsLastSentUpdateTime[toCar.SessionId]) < EntryCar.OutsideNetworkBubbleUpdateRateMs)
+            if ((_sessionManager.ServerTimeMilliseconds - OtherCarsLastSentUpdateTime[toCar.SessionId]) < OutsideNetworkBubbleUpdateRateMs)
             {
                 positionUpdateOut = default;
                 return false;
             }
 
-            EntryCar.OtherCarsLastSentUpdateTime[toCar.SessionId] = _sessionManager.ServerTimeMilliseconds;
+            OtherCarsLastSentUpdateTime[toCar.SessionId] = _sessionManager.ServerTimeMilliseconds;
         }
 
-        positionUpdateOut = new PositionUpdateOut(EntryCar.SessionId,
-            EntryCar.AiControlled ? AiPakSequenceIds[toCar.SessionId]++ : status.PakSequenceId,
+        positionUpdateOut = new PositionUpdateOut(SessionId,
+            AiControlled ? AiPakSequenceIds[toCar.SessionId]++ : status.PakSequenceId,
             (uint)(status.Timestamp - toCar.TimeOffset),
-            EntryCar.Ping,
+            Ping,
             status.Position,
             status.Rotation,
             status.Velocity,
@@ -494,7 +492,7 @@ public class EntryCarTrafficAi : IEntryCarTrafficAi
             status.WheelAngle,
             status.EngineRpm,
             status.Gear,
-            (_serverConfiguration.Extra.ForceLights || EntryCar.ForceLights)
+            (_serverConfiguration.Extra.ForceLights || ForceLights)
                 ? status.StatusFlag | CarStatusFlags.LightsOn
                 : status.StatusFlag,
             status.PerformanceDelta,

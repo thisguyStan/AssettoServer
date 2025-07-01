@@ -1,4 +1,5 @@
 ﻿using AssettoServer.Server;
+using AssettoServer.Shared.Model;
 using AssettoServer.Shared.Network.Packets.Outgoing;
 using Serilog;
 
@@ -32,7 +33,7 @@ public class TrafficAiUpdater
                 instance.AiUpdate();
             }
             
-            Dictionary<EntryCar, List<PositionUpdateOut>> positionUpdates = new();
+            Dictionary<IEntryCar, List<PositionUpdateOut>> positionUpdates = new();
             foreach (var entryCar in _entryCarManager.EntryCars)
             {
                 positionUpdates[entryCar] = [];
@@ -64,8 +65,8 @@ public class TrafficAiUpdater
             {
                 if (updates.Count == 0) continue;
                     
-                var toClient = toCar.Client;
-                if (toClient == null) continue;
+                if (toCar is not IEntryCar<IClient> toPlayerCar || toPlayerCar.Client == null) continue;
+                var toClient = toPlayerCar.Client;
                 
                 const int chunkSize = 20;
                 for (int i = 0; i < updates.Count; i += chunkSize)
