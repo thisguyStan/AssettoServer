@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 
-namespace AssettoServer.Utils;
+namespace AssettoServer.Shared.Utils;
 
 [SuppressMessage("ReSharper", "InconsistentNaming")]
 public static class CSPVersion

@@ -13,13 +13,6 @@ using Serilog.Events;
 
 namespace AssettoServer.Server;
 
-public enum AiMode
-{
-    None,
-    Auto,
-    Fixed
-}
-
 public partial class EntryCar : IEntryCar<ACTcpClient>
 { 
     public ACTcpClient? Client { get; internal set; }
@@ -29,11 +22,11 @@ public partial class EntryCar : IEntryCar<ACTcpClient>
     public bool ForceLights { get; internal set; }
 
     public long LastActiveTime { get; internal set; }
-    public bool HasUpdateToSend { get; internal set; }
+    public bool HasUpdateToSend { get; set; }
     public int TimeOffset { get; internal set; }
     public byte SessionId { get; }
     public uint LastRemoteTimestamp { get; internal set; }
-    public long LastPingTime { get; internal set; }
+    public long LastPingTime { get; set; }
     public long LastPongTime { get; internal set; }
     public ushort Ping { get; internal set; }
     public DriverOptionsFlags DriverOptionsFlags { get; internal set; }
@@ -52,7 +45,7 @@ public partial class EntryCar : IEntryCar<ACTcpClient>
     public int OutsideNetworkBubbleUpdateRateMs { get; internal set; }
 
     public long[] OtherCarsLastSentUpdateTime { get; }
-    public EntryCar? TargetCar { get; set; }
+    public IEntryCar? TargetCar { get; set; }
     private long LastFallCheckTime{ get; set; }
 
     public bool AiControlled { get; set; } = false;
@@ -216,7 +209,7 @@ public partial class EntryCar : IEntryCar<ACTcpClient>
         Status.NormalizedPosition = positionUpdate.NormalizedPosition;
     }
 
-    public bool GetPositionUpdateForCar(EntryCar toCar, out PositionUpdateOut positionUpdateOut)
+    public bool GetPositionUpdateForCar(IEntryCar<IClient> toCar, out PositionUpdateOut positionUpdateOut)
     {
         if (AiControlled)
         {
@@ -264,7 +257,7 @@ public partial class EntryCar : IEntryCar<ACTcpClient>
         return true;
     }
     
-    public bool IsInRange(EntryCar target, float range)
+    public bool IsInRange(IEntryCar<IClient> target, float range)
     {
         var targetPosition = target.TargetCar != null ? target.TargetCar.Status.Position : target.Status.Position;
         return Vector3.DistanceSquared(Status.Position, targetPosition) < range * range;

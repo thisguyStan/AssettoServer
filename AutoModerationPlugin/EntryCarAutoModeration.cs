@@ -144,7 +144,7 @@ public class EntryCarAutoModeration
         if (!_configuration.AfkPenalty.Enabled) return;
         
         if (_configuration.AfkPenalty.IgnoreWithOpenSlots
-            && _entryCarManager.EntryCars.Any(e => e.Model == _entryCar.Model && e.Client == null)) return;
+            && _entryCarManager.EntryCars.OfType<EntryCar>().Any(e => e.Model == _entryCar.Model && e.Client == null)) return;
 
         if (_configuration.AfkPenalty.ExcludedModels.Contains(client.EntryCar.Model)) return;
 

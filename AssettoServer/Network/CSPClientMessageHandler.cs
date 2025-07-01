@@ -3,6 +3,7 @@ using AssettoServer.Network.ClientMessages;
 using AssettoServer.Network.Tcp;
 using AssettoServer.Server;
 using AssettoServer.Server.Configuration;
+using AssettoServer.Shared.Model;
 using AssettoServer.Shared.Network.Packets;
 using AssettoServer.Shared.Network.Packets.Incoming;
 using AssettoServer.Shared.Network.Packets.Shared;
@@ -147,10 +148,10 @@ public class CSPClientMessageHandler
         {
             if (sessionId.HasValue)
             {
-                var client = _entryCarManager.EntryCars[sessionId.Value].Client;
-                if (client != null && (!range.HasValue || sender.EntryCar.IsInRange(client.EntryCar, range.Value)))
+                var car = _entryCarManager.EntryCars[sessionId.Value];
+                if (car is IEntryCar<IClient> { Client: not null } entryCar && (!range.HasValue || sender.EntryCar.IsInRange(entryCar, range.Value)))
                 {
-                    client.SendPacketUdp(in clientMessage);
+                    entryCar.Client?.SendPacketUdp(in clientMessage);
                 }
             }
             else
@@ -162,7 +163,11 @@ public class CSPClientMessageHandler
         {
             if (sessionId.HasValue)
             {
-                _entryCarManager.EntryCars[sessionId.Value].Client?.SendPacket(clientMessage);
+                var car = _entryCarManager.EntryCars[sessionId.Value];
+                if (car is IEntryCar<IClient> { Client: not null } entryCar)
+                {
+                    entryCar.Client?.SendPacket(clientMessage);
+                }
             }
             else
             {
@@ -190,8 +195,9 @@ public class CSPClientMessageHandler
             
             sender.Logger.Information("CSP admin penalty received from {ClientName} ({SessionId}): User is admin", 
                 sender.Name, sender.SessionId);
-            
-            _entryCarManager.EntryCars[packet.CarIndex].Client?.SendPacket(packet);
+
+            if (_entryCarManager.EntryCars[packet.CarIndex] is not EntryCar car) return;
+            car.Client?.SendPacket(packet);
         }
         else
         {

@@ -4,6 +4,7 @@ using System.Text.Json;
 using AssettoServer.Network.Tcp;
 using AssettoServer.Server;
 using AssettoServer.Server.Configuration;
+using AssettoServer.Shared.Utils;
 using AssettoServer.Utils;
 using FastTravelPlugin.Packets;
 using Microsoft.Extensions.Hosting;

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
+using AssettoServer.Shared.Utils;
 using AssettoServer.Utils;
 using CommunityToolkit.Mvvm.ComponentModel;
 using JetBrains.Annotations;

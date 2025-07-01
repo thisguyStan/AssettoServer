@@ -4,6 +4,7 @@ using AssettoServer.Network.Http;
 using AssettoServer.Network.Tcp;
 using AssettoServer.Server;
 using AssettoServer.Server.Configuration;
+using AssettoServer.Shared.Model;
 using AssettoServer.Shared.Network.Packets.Outgoing;
 using AssettoServer.Utils;
 using Microsoft.Extensions.Hosting;
@@ -172,12 +173,12 @@ public class AiBehavior : BackgroundService
         }
     }
     
-    private readonly List<AssettoServer.Server.EntryCar> _playerCars = new();
+    private readonly List<EntryCar> _playerCars = new();
     private readonly List<AiState> _initializedAiStates = new();
     private readonly List<AiState> _uninitializedAiStates = new();
     private readonly List<Vector3> _playerOffsetPositions = new();
     private readonly List<KeyValuePair<AiState, float>> _aiMinDistanceToPlayer = new();
-    private readonly List<KeyValuePair<AssettoServer.Server.EntryCar, float>> _playerMinDistanceToAi = new();
+    private readonly List<KeyValuePair<EntryCar, float>> _playerMinDistanceToAi = new();
     private void Update()
     {
         using var context = _updateDurationTimer.NewTimer();

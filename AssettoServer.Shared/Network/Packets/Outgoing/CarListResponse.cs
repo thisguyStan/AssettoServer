@@ -6,7 +6,7 @@ public class CarListResponse : IOutgoingNetworkPacket
 {
     public int PageIndex;
     public int EntryCarsCount;
-    public required IEnumerable<IEntryCar<IClient>> EntryCars;
+    public required IEnumerable<IEntryCar> EntryCars;
     public required Dictionary<byte, EntryCarResult> CarResults;
 
     public void ToWriter(ref PacketWriter writer)

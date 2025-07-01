@@ -4,7 +4,7 @@ namespace AssettoServer.Shared.Network.Packets.Outgoing;
 
 public class DriverInfoUpdate : IOutgoingNetworkPacket
 {
-    public required IEnumerable<IEntryCar<IClient>> ConnectedCars { get; init; }
+    public required IEnumerable<IEntryCar> ConnectedCars { get; init; }
 
     public void ToWriter(ref PacketWriter writer)
     {
@@ -14,7 +14,7 @@ public class DriverInfoUpdate : IOutgoingNetworkPacket
         foreach(var car in ConnectedCars)
         {
             writer.Write(car.SessionId);
-            writer.WriteUTF32String(car.AiControlled ? car.AiName : car.Client?.Name);
+            writer.WriteUTF32String(car is IEntryCar<IClient> { Client: not null } playerCar ? playerCar.Client?.Name : car.AiName );
         }
     }
 }

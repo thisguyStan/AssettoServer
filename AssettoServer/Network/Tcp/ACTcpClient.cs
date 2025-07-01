@@ -245,7 +245,7 @@ public class ACTcpClient : IClient
     {
         SendPacket(new ApiKeyPacket { Key = ApiKey });
         
-        var connectedCars = _entryCarManager.EntryCars.Where(c => c.Client != null || c.AiControlled).ToList();
+        var connectedCars = _entryCarManager.EntryCars.Where(c => c is IEntryCar<IClient> { Client: not null} || c.AiControlled).ToList();
         foreach (var car in connectedCars)
         {
             if (!car.EnableCollisions)
@@ -589,14 +589,14 @@ public class ACTcpClient : IClient
 
         foreach (var evt in clientEvent.ClientEvents)
         {
-            EntryCar? targetCar = null;
+            IEntryCar? targetCar = null;
 
             switch (evt.Type)
             {
                 case ClientEventType.CollisionWithCar:
                     targetCar = _entryCarManager.EntryCars[evt.TargetSessionId];
                     Logger.Information("Collision between {SourceCarName} ({SourceCarSessionId}) and {TargetCarName} ({TargetCarSessionId}), rel. speed {Speed:F0}km/h",
-                        Name, EntryCar.SessionId, targetCar.Client?.Name ?? targetCar.AiName, targetCar.SessionId, evt.Speed);
+                        Name, EntryCar.SessionId, targetCar is not IEntryCar<IClient> { Client: not null } connectedTargetCar ? targetCar.AiName : connectedTargetCar.Client?.Name, targetCar.SessionId, evt.Speed);
                     break;
                 case ClientEventType.CollisionWithEnv:
                     Logger.Information("Collision between {SourceCarName} ({SourceCarSessionId}) and environment, rel. speed {Speed:F0}km/h",
@@ -852,7 +852,7 @@ public class ACTcpClient : IClient
     {
         try
         {
-            var connectedCars = _entryCarManager.EntryCars.Where(c => c.Client != null || c.AiControlled).ToList();
+            var connectedCars = _entryCarManager.EntryCars.Where(c => c is IEntryCar<IClient> { Client: not null } || c.AiControlled).ToList();
 
             SendPacket(new WelcomeMessage { Message = await _cspServerExtraOptions.GenerateWelcomeMessageAsync(this) });
 
@@ -957,7 +957,7 @@ public class ACTcpClient : IClient
         return true;
     }
 
-    internal async Task DisconnectAsync()
+    public async Task DisconnectAsync()
     {
         try
         {
