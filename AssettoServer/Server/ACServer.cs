@@ -11,7 +11,6 @@ using AssettoServer.Server.Blacklist;
 using AssettoServer.Server.GeoParams;
 using AssettoServer.Server.Whitelist;
 using AssettoServer.Shared.Network.Packets.Outgoing;
-using AssettoServer.Shared.Network.Packets.Shared;
 using AssettoServer.Utils;
 using Microsoft.Extensions.Hosting;
 using Prometheus;
@@ -178,7 +177,7 @@ public class ACServer : BackgroundService, IHostedLifecycleService
                         if (fromClient != null && fromClient.HasSentFirstUpdate && (_sessionManager.ServerTimeMilliseconds - fromCar.LastPingTime) > 1000)
                         {
                             fromCar.LastPingTime = _sessionManager.ServerTimeMilliseconds;
-                            fromClient.SendPacketUdp(new PingUpdate((uint)fromCar.LastPingTime, fromCar.Ping));
+                            fromClient.SendPacketUdp(new PingRequest((uint)fromCar.LastPingTime, fromCar.Ping));
 
                             if (_sessionManager.ServerTimeMilliseconds - fromCar.LastPongTime > 15000)
                             {
@@ -285,6 +284,7 @@ public class ACServer : BackgroundService, IHostedLifecycleService
                 {
                     Log.Fatal(ex, "Cannot recover from update loop error, shutting down");
                     _applicationLifetime.StopApplication();
+                    return;
                 }
             }
         }
