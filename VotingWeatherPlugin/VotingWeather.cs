@@ -14,8 +14,8 @@ public class VotingWeather : BackgroundService
     private readonly EntryCarManager _entryCarManager;
     private readonly VotingWeatherConfiguration _configuration;
     private readonly List<WeatherFxType> _weathers;
-    private readonly List<ACTcpClient> _alreadyVoted = new();
-    private readonly List<WeatherChoice> _availableWeathers = new();
+    private readonly List<ACTcpClient> _alreadyVoted = [];
+    private readonly List<WeatherChoice> _availableWeathers = [];
 
     private bool _votingOpen = false;
 
@@ -122,6 +122,12 @@ public class VotingWeather : BackgroundService
         var winner = weathers[Random.Shared.Next(weathers.Count)];
         var winnerType = _weatherTypeProvider.GetWeatherType(winner);
 
+        if (maxVotes == 0 && _configuration.KeepWeatherOnNoVotes)
+        {
+            _entryCarManager.BroadcastChat("Weather vote ended without any votes cast. Not changing weather.");
+            return;
+        }
+        
         _entryCarManager.BroadcastChat($"Weather vote ended. Next weather: {winner}");
 
         _weatherManager.SetWeather(new WeatherData(last.Type, winnerType)

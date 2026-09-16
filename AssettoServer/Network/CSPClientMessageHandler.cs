@@ -6,7 +6,6 @@ using AssettoServer.Server.Configuration;
 using AssettoServer.Shared.Network.Packets;
 using AssettoServer.Shared.Network.Packets.Incoming;
 using AssettoServer.Shared.Network.Packets.Shared;
-using Serilog;
 
 namespace AssettoServer.Network;
 
@@ -58,7 +57,7 @@ public class CSPClientMessageHandler
 
                     if (_configuration.Extra.DebugClientMessages)
                     {
-                        Log.Verbose("UDP client message received from {ClientName} ({SessionId}), type {Type}, data {Data}",
+                        sender.Logger.Verbose("UDP client message received from {ClientName} ({SessionId}), type {Type}, data {Data}",
                             sender.Name, sender.SessionId, packetType, clientMessage.Data);
                     }
 
