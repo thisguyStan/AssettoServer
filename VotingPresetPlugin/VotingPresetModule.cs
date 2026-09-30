@@ -1,17 +1,16 @@
-﻿using AssettoServer.Server.Plugin;
-using Autofac;
-using Microsoft.Extensions.Hosting;
+using AssettoServer.Server.Plugin;
+using Microsoft.Extensions.DependencyInjection;
 using VotingPresetPlugin.Preset;
 
 namespace VotingPresetPlugin;
 
 public class VotingPresetModule : AssettoServerModule<VotingPresetConfiguration>
 {
-    protected override void Load(ContainerBuilder builder)
+    public override void ConfigureDependencies(IServiceCollection services)
     {
-        builder.RegisterType<PresetConfigurationManager>().AsSelf().SingleInstance();
-        builder.RegisterType<PresetManager>().AsSelf().SingleInstance();
-        builder.RegisterType<VotingPresetPlugin>().AsSelf().As<IHostedService>().SingleInstance();
+        services.AddSingleton<PresetConfigurationManager>();
+        services.AddSingleton<PresetManager>();
+        services.AddSingletonHostedService<VotingPresetPlugin>();
     }
 
     public override VotingPresetConfiguration ReferenceConfiguration => new()

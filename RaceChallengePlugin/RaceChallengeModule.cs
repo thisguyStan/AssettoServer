@@ -1,15 +1,14 @@
-﻿using AssettoServer.Server.Plugin;
-using Autofac;
-using Microsoft.Extensions.Hosting;
+using AssettoServer.Server.Plugin;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace RaceChallengePlugin;
 
 public class RaceChallengeModule : AssettoServerModule
 {
-    protected override void Load(ContainerBuilder builder)
+    public override void ConfigureDependencies(IServiceCollection services)
     {
-        builder.RegisterType<RaceChallengePlugin>().AsSelf().As<IHostedService>().SingleInstance();
-        builder.RegisterType<EntryCarRace>().AsSelf();
-        builder.RegisterType<Race>().AsSelf();
+        services.AddSingletonHostedService<RaceChallengePlugin>();
+        services.AddTransient<EntryCarRace>();
+        services.AddTransient<Race>();
     }
 }

@@ -1,6 +1,6 @@
 ﻿using AssettoServer.Server.OpenSlotFilters;
 using AssettoServer.Server.Plugin;
-using Autofac;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace WordFilterPlugin;
 
@@ -18,8 +18,8 @@ public class WordFilterModule : AssettoServerModule<WordFilterConfiguration>
         ]
     };
 
-    protected override void Load(ContainerBuilder builder)
+    public override void ConfigureDependencies(IServiceCollection services)
     {
-        builder.RegisterType<WordFilter>().As<IOpenSlotFilter>().SingleInstance();
+        services.AddSingleton<IOpenSlotFilter, WordFilter>();
     }
 }

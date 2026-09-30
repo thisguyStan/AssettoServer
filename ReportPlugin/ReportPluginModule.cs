@@ -1,13 +1,12 @@
-﻿using AssettoServer.Server.Plugin;
-using Autofac;
-using Microsoft.Extensions.Hosting;
+using AssettoServer.Server.Plugin;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace ReportPlugin;
 
 public class ReportPluginModule : AssettoServerModule<ReportConfiguration>
 {
-    protected override void Load(ContainerBuilder builder)
+    public override void ConfigureDependencies(IServiceCollection services)
     {
-        builder.RegisterType<ReportPlugin>().AsSelf().As<IHostedService>().SingleInstance();
+        services.AddSingletonHostedService<ReportPlugin>();
     }
 }

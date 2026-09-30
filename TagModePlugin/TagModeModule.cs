@@ -1,15 +1,14 @@
-﻿using AssettoServer.Server.Plugin;
-using Autofac;
-using Microsoft.Extensions.Hosting;
+using AssettoServer.Server.Plugin;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace TagModePlugin;
 
 public class TagModeModule : AssettoServerModule<TagModeConfiguration>
 {
-    protected override void Load(ContainerBuilder builder)
+    public override void ConfigureDependencies(IServiceCollection services)
     {
-        builder.RegisterType<TagModePlugin>().AsSelf().As<IHostedService>().SingleInstance();
-        builder.RegisterType<EntryCarTagMode>().AsSelf();
-        builder.RegisterType<TagSession>().AsSelf();
+        services.AddSingletonHostedService<TagModePlugin>();
+        services.AddTransient<EntryCarTagMode>();
+        services.AddTransient<TagSession>();
     }
 }

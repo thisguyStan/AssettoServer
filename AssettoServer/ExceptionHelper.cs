@@ -4,7 +4,7 @@ using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using AssettoServer.Server.Configuration;
 using AssettoServer.Utils;
-using Autofac.Core;
+using DryIoc;
 using IniParser.Exceptions;
 using Microsoft.AspNetCore.Connections;
 using YamlDotNet.Core;
@@ -13,7 +13,8 @@ namespace AssettoServer;
 
 internal static class ExceptionHelper
 {
-    private const string HorizontalSeparator = "══════════════════════════════════════════════════════════════════════════════════════════════════════";
+    private const string HorizontalSeparator =
+        "══════════════════════════════════════════════════════════════════════════════════════════════════════";
 
     private const string GeneralInformation = """
                                               AssettoServer has failed to start. Here is what to try next:
@@ -31,7 +32,7 @@ internal static class ExceptionHelper
         string? helpLink = null;
         string? configPath = null;
 
-        while (ex is DependencyResolutionException && ex.InnerException != null)
+        while (ex is ContainerException && ex.InnerException != null)
         {
             ex = ex.InnerException;
         }
@@ -44,7 +45,7 @@ internal static class ExceptionHelper
                 ex = ex.InnerException;
             }
         }
-        
+
         Console.WriteLine();
         switch (ex)
         {
@@ -72,7 +73,7 @@ internal static class ExceptionHelper
         Console.WriteLine(HorizontalSeparator);
         Console.WriteLine(GeneralInformation);
         Console.WriteLine(HorizontalSeparator);
-        
+
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && !Console.IsInputRedirected && !isContentManager)
         {
             var old = Console.ForegroundColor;
@@ -86,10 +87,12 @@ internal static class ExceptionHelper
             {
                 Console.WriteLine("Press F to show the faulty configuration file");
             }
+
             if (crashReportPath != null)
             {
                 Console.WriteLine("Press C to show the crash report");
             }
+
             Console.WriteLine("Press W to go to the AssettoServer website");
             Console.WriteLine("Press D to join the official Discord server");
             Console.WriteLine("Press any other key to exit");
@@ -148,25 +151,25 @@ internal static class ExceptionHelper
     private static string YamlExceptionHelp(YamlException ex, string? path = null)
     {
         return $"""
-YAML error in {path ?? "unknown file"} around line {ex.Start.Line}.
-{ex.Message}
-""";
+                YAML error in {path ?? "unknown file"} around line {ex.Start.Line}.
+                {ex.Message}
+                """;
     }
 
     private static string IniExceptionHelp(ParsingException ex, string? path = null)
     {
         return $"""
-INI error in {path ?? "unknown file"} around line {ex.LineNumber}.
-{ex.Message}
-""";
+                INI error in {path ?? "unknown file"} around line {ex.LineNumber}.
+                {ex.Message}
+                """;
     }
 
     private static string AddressInUseExceptionHelp()
     {
         return """
-There is already a server running on the same ports.
-When hosting through Content Manager, make sure that server presets using the same ports are stopped.
-You can also check in Task Manager if another AssettoServer.exe process is running and stop it there. 
-""";
+               There is already a server running on the same ports.
+               When hosting through Content Manager, make sure that server presets using the same ports are stopped.
+               You can also check in Task Manager if another AssettoServer.exe process is running and stop it there.
+               """;
     }
 }

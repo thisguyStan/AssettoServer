@@ -1,14 +1,13 @@
-﻿using AssettoServer.Server.Plugin;
-using Autofac;
-using Microsoft.Extensions.Hosting;
+using AssettoServer.Server.Plugin;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace AutoModerationPlugin;
 
 public class AutoModerationModule : AssettoServerModule<AutoModerationConfiguration>
 {
-    protected override void Load(ContainerBuilder builder)
+    public override void ConfigureDependencies(IServiceCollection services)
     {
-        builder.RegisterType<AutoModerationPlugin>().AsSelf().As<IHostedService>().SingleInstance();
-        builder.RegisterType<EntryCarAutoModeration>().AsSelf();
+        services.AddSingletonHostedService<AutoModerationPlugin>();
+        services.AddTransient<EntryCarAutoModeration>();
     }
 }

@@ -1,11 +1,11 @@
 ﻿using AssettoServer.Server.Configuration;
 using AssettoServer.Server.Weather.Implementation;
-using Autofac;
-using Microsoft.Extensions.Hosting;
+using AssettoServer.Server.Plugin;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace AssettoServer.Server.Weather;
 
-public class WeatherModule : Module
+public class WeatherModule
 {
     private readonly ACServerConfiguration _configuration;
 
@@ -14,19 +14,19 @@ public class WeatherModule : Module
         _configuration = configuration;
     }
 
-    protected override void Load(ContainerBuilder builder)
+    public void ConfigureDependencies(IServiceCollection services)
     {
         if (_configuration.Extra.EnableWeatherFx)
         {
-            builder.RegisterType<WeatherFxV1Implementation>().As<IWeatherImplementation>().SingleInstance();
+            services.AddSingleton<IWeatherImplementation, WeatherFxV1Implementation>();
         }
         else
         {
-            builder.RegisterType<VanillaWeatherImplementation>().As<IWeatherImplementation>().SingleInstance();
+            services.AddSingleton<IWeatherImplementation, VanillaWeatherImplementation>();
         }
 
-        builder.RegisterType<RainHelper>().AsSelf();
-        builder.RegisterType<DefaultWeatherTypeProvider>().As<IWeatherTypeProvider>().SingleInstance();
-        builder.RegisterType<WeatherManager>().AsSelf().As<IHostedService>().SingleInstance();
+        services.AddTransient<RainHelper>();
+        services.AddSingleton<IWeatherTypeProvider, DefaultWeatherTypeProvider>();
+        services.AddSingletonHostedService<WeatherManager>();
     }
 }

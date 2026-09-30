@@ -26,8 +26,6 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Autofac" Version="9.3.4"/>
-        <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="11.0.2"/>
         <PackageReference Include="CommandLineParser" Version="2.9.1"/>
         <PackageReference Include="CommunityToolkit.Common" Version="8.4.2"/>
         <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2"/>
@@ -35,6 +33,7 @@
         <PackageReference Include="CXuesong.Luaon.Json" Version="0.2.1"/>
         <PackageReference Include="DotNext.IO" Version="6.8.0"/>
         <PackageReference Include="DotNext.Unsafe" Version="6.8.0"/>
+        <PackageReference Include="DryIoc.Microsoft.DependencyInjection" Version="6.2.0"/>
         <PackageReference Include="ErrorProne.NET.CoreAnalyzers" Version="0.6.1-beta.1">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
