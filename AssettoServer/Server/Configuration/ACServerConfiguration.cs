@@ -11,8 +11,8 @@ using AssettoServer.Server.Plugin;
 using AssettoServer.Shared.Model;
 using AssettoServer.Shared.Network.Http.Responses;
 using AssettoServer.Utils;
-using Autofac;
 using FluentValidation;
+using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using Serilog;
 using YamlDotNet.Serialization;
@@ -311,7 +311,7 @@ public partial class ACServerConfiguration
         }
     }
 
-    internal void LoadPluginConfiguration(ACPluginLoader loader, ContainerBuilder? builder)
+    internal void LoadPluginConfiguration(ACPluginLoader loader, IServiceCollection? services)
     {
         foreach (var plugin in loader.LoadedPlugins)
         {
@@ -324,14 +324,14 @@ public partial class ACServerConfiguration
                 ReferenceConfigurationHelper.WriteReferenceConfiguration(plugin.ReferenceConfigurationFileName,
                     schemaPath, plugin.ReferenceConfiguration, plugin.Name);
                 
-                if (File.Exists(configPath) && builder != null)
+                if (File.Exists(configPath) && services != null)
                 {
                     var deserializer = new DeserializerBuilder().Build();
                     using var file = File.OpenText(configPath);
                     var configObj = deserializer.Deserialize(file, plugin.ConfigurationType)!;
 
                     ValidatePluginConfiguration(plugin, configObj);
-                    builder.RegisterInstance(configObj).AsSelf();
+                    services.AddSingleton(plugin.ConfigurationType, configObj);
                 }
                 else
                 {

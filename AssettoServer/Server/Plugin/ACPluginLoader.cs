@@ -15,6 +15,11 @@ public class ACPluginLoader
     public List<LoadedPlugin> LoadedPlugins { get; } = [];
 
     public ACPluginLoader(bool loadFromWorkdir)
+        : this(loadFromWorkdir, Path.Combine(AppContext.BaseDirectory, "plugins"))
+    {
+    }
+
+    internal ACPluginLoader(bool loadFromWorkdir, string pluginsDirectory)
     {
         if (loadFromWorkdir)
         {
@@ -29,8 +34,7 @@ public class ACPluginLoader
             }
         }
         
-        string pluginsDir = Path.Combine(AppContext.BaseDirectory, "plugins");
-        ScanDirectory(pluginsDir);
+        ScanDirectory(pluginsDirectory);
     }
 
     private void ScanDirectory(string path)

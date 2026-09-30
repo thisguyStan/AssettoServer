@@ -1,12 +1,14 @@
-﻿using AssettoServer.Server.Ai.Splines;
+﻿using System;
+using AssettoServer.Server.Ai.Splines;
 using AssettoServer.Server.Configuration;
 using AssettoServer.Server.OpenSlotFilters;
-using Autofac;
+using AssettoServer.Server.Plugin;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
 namespace AssettoServer.Server.Ai;
 
-public class AiModule : Module
+public class AiModule : AssettoServerModule
 {
     private readonly ACServerConfiguration _configuration;
 
@@ -15,25 +17,25 @@ public class AiModule : Module
         _configuration = configuration;
     }
 
-    protected override void Load(ContainerBuilder builder)
+    public override void ConfigureServices(IServiceCollection services)
     {
-        builder.RegisterType<AiState>().AsSelf();
+        services.AddTransientFactory<Func<EntryCar, AiState>>();
 
         if (_configuration.Extra.EnableAi)
         {
-            builder.RegisterType<AiBehavior>().AsSelf().As<IHostedService>().SingleInstance();
-            builder.RegisterType<AiUpdater>().AsSelf().SingleInstance().AutoActivate();
-            builder.RegisterType<AiSlotFilter>().As<IOpenSlotFilter>();
-            
+            services.AddSingletonHostedService<AiBehavior>();
+            services.AddAutoActivatedSingleton<AiUpdater>();
+            services.AddTransient<IOpenSlotFilter, AiSlotFilter>();
+
             if (_configuration.Extra.AiParams.HourlyTrafficDensity != null)
             {
-                builder.RegisterType<DynamicTrafficDensity>().As<IHostedService>().SingleInstance();
+                services.AddSingleton<IHostedService, DynamicTrafficDensity>();
             }
 
-            builder.RegisterType<AiSplineWriter>().AsSelf();
-            builder.RegisterType<FastLaneParser>().AsSelf();
-            builder.RegisterType<AiSplineLocator>().AsSelf();
-            builder.Register((AiSplineLocator locator) => locator.Locate()).AsSelf().SingleInstance();
+            services.AddTransient<AiSplineWriter>();
+            services.AddTransient<FastLaneParser>();
+            services.AddTransient<AiSplineLocator>();
+            services.AddSingleton(provider => provider.GetRequiredService<AiSplineLocator>().Locate());
         }
     }
 }

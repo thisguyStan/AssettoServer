@@ -10,6 +10,30 @@ This is a fork of https://github.com/Niewiarowski/AssettoServer.
 ## Documentation
 For more information on configuration, admin commands, etc. also check out our [website](https://assettoserver.org/).
 
+### Plugin dependency injection migration
+Plugins now use `Microsoft.Extensions.DependencyInjection`. DLL plugins, configuration, controllers, and constructor-injected services remain supported. Plugins overriding Autofac's `Load(ContainerBuilder)` must migrate and rebuild; there is no binary compatibility layer.
+
+Override `ConfigureServices(IServiceCollection)` to register plugin services:
+
+```csharp
+using AssettoServer.Server.Plugin;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace SamplePlugin;
+
+public class SampleModule : AssettoServerModule<SampleConfiguration>
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddSingletonHostedService<Sample>();
+    }
+}
+```
+
+Use `AddSingleton<T>()` or `AddSingleton<IService, Implementation>()` for former `SingleInstance()` registrations. Use `AddTransient<T>()` (or its interface overload) for former default registrations without runtime arguments. `AddSingletonHostedService<T>()` shares one singleton between self and `IHostedService`, preserving startup order. `services.AddAutoActivatedSingleton<StartupListener>();` eagerly activates before server startup without registering a hosted service.
+
+For runtime `EntryCar` or `ACTcpClient` arguments, register a factory instead of `AddTransient<T>()`: `services.AddTransientFactory<Func<EntryCar, PerCarService>>();` (`EntryCar` is in `AssettoServer.Server`). Other constructor dependencies come from DI. `Func` arguments match by type; custom delegates such as `services.AddTransientFactory<Race.Factory>();` match by parameter name. Disposable products belong to the resolving DI scope. These helpers are public extensions in `AssettoServer.Server.Plugin`.
+
 ## Getting help
 If you have trouble setting up a server feel free to visit the #server-troubleshooting channel on our [Discord](https://discord.gg/uXEXRcSkyz).
 

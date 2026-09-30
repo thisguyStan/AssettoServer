@@ -1,12 +1,12 @@
 ﻿using AssettoServer.Server.Plugin;
-using Autofac;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace DiscordAuditPlugin;
 
 public class DiscordAuditModule : AssettoServerModule<DiscordConfiguration>
 {
-    protected override void Load(ContainerBuilder builder)
+    public override void ConfigureServices(IServiceCollection services)
     {
-        builder.RegisterType<Discord>().AsSelf().AutoActivate().SingleInstance();
+        services.AddAutoActivatedSingleton<Discord>();
     }
 }

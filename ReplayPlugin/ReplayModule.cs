@@ -1,18 +1,17 @@
 ﻿using AssettoServer.Server.Plugin;
-using Autofac;
-using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace ReplayPlugin;
 
 public class ReplayModule : AssettoServerModule<ReplayConfiguration>
 {
-    protected override void Load(ContainerBuilder builder)
+    public override void ConfigureServices(IServiceCollection services)
     {
-        builder.RegisterType<ReplayPlugin>().AsSelf().As<IHostedService>().SingleInstance();
-        builder.RegisterType<ReplayService>().AsSelf().As<IHostedService>().SingleInstance();
-        builder.RegisterType<ReplayWriter>().AsSelf().SingleInstance();
-        builder.RegisterType<ReplaySegmentManager>().AsSelf().SingleInstance();
-        builder.RegisterType<EntryCarExtraDataManager>().AsSelf().SingleInstance();
-        builder.RegisterType<ReplayMetadataProvider>().AsSelf().SingleInstance();
+        services.AddSingletonHostedService<ReplayPlugin>();
+        services.AddSingletonHostedService<ReplayService>();
+        services.AddSingleton<ReplayWriter>();
+        services.AddSingleton<ReplaySegmentManager>();
+        services.AddSingleton<EntryCarExtraDataManager>();
+        services.AddSingleton<ReplayMetadataProvider>();
     }
 }

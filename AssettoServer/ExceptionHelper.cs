@@ -4,7 +4,6 @@ using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using AssettoServer.Server.Configuration;
 using AssettoServer.Utils;
-using Autofac.Core;
 using IniParser.Exceptions;
 using Microsoft.AspNetCore.Connections;
 using YamlDotNet.Core;
@@ -30,11 +29,6 @@ internal static class ExceptionHelper
     {
         string? helpLink = null;
         string? configPath = null;
-
-        while (ex is DependencyResolutionException && ex.InnerException != null)
-        {
-            ex = ex.InnerException;
-        }
 
         if (ex is ConfigurationParsingException cfgEx)
         {

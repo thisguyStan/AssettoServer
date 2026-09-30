@@ -1,13 +1,12 @@
 ﻿using AssettoServer.Server.Plugin;
-using Autofac;
-using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace SamplePlugin;
 
 public class SampleModule : AssettoServerModule<SampleConfiguration>
 {
-    protected override void Load(ContainerBuilder builder)
+    public override void ConfigureServices(IServiceCollection services)
     {
-        builder.RegisterType<Sample>().AsSelf().As<IHostedService>().SingleInstance();
+        services.AddSingletonHostedService<Sample>();
     }
 }

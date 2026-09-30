@@ -1,13 +1,12 @@
 ﻿using AssettoServer.Server.Plugin;
-using Autofac;
-using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace VotingWeatherPlugin;
 
 public class VotingWeatherModule : AssettoServerModule<VotingWeatherConfiguration>
 {
-    protected override void Load(ContainerBuilder builder)
+    public override void ConfigureServices(IServiceCollection services)
     {
-        builder.RegisterType<VotingWeather>().AsSelf().As<IHostedService>().SingleInstance();
+        services.AddSingletonHostedService<VotingWeather>();
     }
 }

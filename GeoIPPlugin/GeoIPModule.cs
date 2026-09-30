@@ -1,12 +1,12 @@
 ﻿using AssettoServer.Server.Plugin;
-using Autofac;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace GeoIPPlugin;
 
 public class GeoIPModule : AssettoServerModule<GeoIPConfiguration>
 {
-    protected override void Load(ContainerBuilder builder)
+    public override void ConfigureServices(IServiceCollection services)
     {
-        builder.RegisterType<GeoIP>().AsSelf().AutoActivate().SingleInstance();
+        services.AddAutoActivatedSingleton<GeoIP>();
     }
 }

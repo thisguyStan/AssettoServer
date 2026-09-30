@@ -1,13 +1,12 @@
 ﻿using AssettoServer.Server.Plugin;
-using Autofac;
-using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace CustomCommandPlugin;
 
 public class CustomCommandModule : AssettoServerModule<CustomCommandConfiguration>
 {
-    protected override void Load(ContainerBuilder builder)
+    public override void ConfigureServices(IServiceCollection services)
     {
-        builder.RegisterType<CustomCommand>().AsSelf().As<IHostedService>().SingleInstance();
+        services.AddSingletonHostedService<CustomCommand>();
     }
 }

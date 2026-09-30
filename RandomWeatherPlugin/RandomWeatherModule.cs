@@ -1,7 +1,6 @@
 ﻿using AssettoServer.Server.Plugin;
 using AssettoServer.Shared.Weather;
-using Autofac;
-using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace RandomWeatherPlugin;
 
@@ -80,8 +79,8 @@ public class RandomWeatherModule : AssettoServerModule<RandomWeatherConfiguratio
         },
     };
     
-    protected override void Load(ContainerBuilder builder)
+    public override void ConfigureServices(IServiceCollection services)
     {
-        builder.RegisterType<RandomWeather>().AsSelf().As<IHostedService>().SingleInstance();
+        services.AddSingletonHostedService<RandomWeather>();
     }
 }

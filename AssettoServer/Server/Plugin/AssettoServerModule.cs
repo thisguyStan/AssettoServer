@@ -1,4 +1,3 @@
-﻿using Autofac;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -7,7 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace AssettoServer.Server.Plugin;
 
 [UsedImplicitly(ImplicitUseTargetFlags.WithInheritors)]
-public abstract class AssettoServerModule : Module
+public abstract class AssettoServerModule
 {
     public virtual object? ReferenceConfiguration => null;
     

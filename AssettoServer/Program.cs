@@ -7,8 +7,8 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using AssettoServer.Server.Configuration;
+using AssettoServer.Server.Plugin;
 using AssettoServer.Utils;
-using Autofac.Extensions.DependencyInjection;
 using CommandLine;
 using DotNext.Collections.Generic;
 using FluentValidation;
@@ -30,7 +30,7 @@ public static class Program
 #else
     public static readonly bool IsDebugBuild = false;
 #endif
-    
+
     [UsedImplicitly(ImplicitUseKindFlags.Assign, ImplicitUseTargetFlags.WithMembers)]
     private class Options
     {
@@ -48,10 +48,10 @@ public static class Program
 
         [Option("verbose", Required = false, HelpText = "Change log level to verbose")]
         public bool UseVerboseLogging { get; set; } = false;
-        
+
         [Option('r',"use-random-preset", Required = false, HelpText = "Use a random available configuration preset")]
         public bool UseRandomPreset { get; set; } = false;
-        
+
         [Option('g',"generate-config", Required = false, HelpText = "Generate configuration file for all installed plugins")]
         public bool GenerateConfigs { get; set; } = false;
     }
@@ -66,43 +66,43 @@ public static class Program
 
     public static bool IsContentManager { get; private set; }
     public static ConfigurationLocations? ConfigurationLocations { get; private set; }
-    
+
     private static bool _loadPluginsFromWorkdir;
     private static bool _generatePluginConfigs;
     private static TaskCompletionSource<StartOptions> _restartTask = new();
-    
+
     internal static async Task Main(string[] args)
     {
         SetupFluentValidation();
         SetupMetrics();
         DetectContentManager();
-        
+
         var options = Parser.Default.ParseArguments<Options>(args).Value;
         if (options == null) return;
 
         _loadPluginsFromWorkdir = options.LoadPluginsFromWorkdir;
         _generatePluginConfigs = options.GenerateConfigs;
-        
+
         if (IsContentManager)
         {
             Console.OutputEncoding = Encoding.UTF8;
         }
-        
+
         if (options.UseRandomPreset)
         {
             var presetsPath = Path.Join(AppContext.BaseDirectory, "presets");
             var presets = Path.Exists(presetsPath) ? 
                 Directory.EnumerateDirectories("presets").Select(Path.GetFileName).OfType<string>().ToArray() : [];
-            
+
             if (presets.Length > 0)
                 options.Preset = presets[Random.Shared.Next(presets.Length)];
-            else 
+            else
                 Log.Warning("Presets directory does not exist or contain any preset");
         }
 
         string logPrefix = string.IsNullOrEmpty(options.Preset) ? "log" : options.Preset;
         Logging.CreateLogger(logPrefix, IsContentManager, options.Preset, options.UseVerboseLogging);
-        
+
         AppDomain.CurrentDomain.UnhandledException += UnhandledException;
         Log.Information("AssettoServer {Version}", ThisAssembly.AssemblyInformationalVersion);
         if (IsContentManager)
@@ -116,7 +116,7 @@ public static class Program
             ServerCfgPath = options.ServerCfgPath,
             EntryListPath = options.EntryListPath
         };
-        
+
         while (true)
         {
             _restartTask = new TaskCompletionSource<StartOptions>();
@@ -160,7 +160,7 @@ public static class Program
         CancellationToken token = default)
     {
         ConfigurationLocations = ConfigurationLocations.FromOptions(preset, serverCfgPath, entryListPath);
-        
+
         try
         {
             var config = new ACServerConfiguration(preset, ConfigurationLocations, _loadPluginsFromWorkdir, _generatePluginConfigs, portOverrides);
@@ -174,7 +174,6 @@ public static class Program
             }
 
             var host = Host.CreateDefaultBuilder()
-                .UseServiceProviderFactory(new AutofacServiceProviderFactory())
                 .UseSerilog()
                 .ConfigureAppConfiguration(builder => { builder.Sources.Clear(); })
                 .ConfigureWebHostDefaults(webHostBuilder =>
@@ -188,19 +187,31 @@ public static class Program
                 })
                 .Build();
 
-            var applicationLifetime = host.Services.GetRequiredService<IHostApplicationLifetime>();
-            var stoppedRegistration = applicationLifetime.ApplicationStopped
-                .Register(() => OnApplicationStopped(applicationLifetime, host.Services.GetServices<IHostedService>()));
+            try
+            {
+                host.Services.ActivateSingletons();
+                var applicationLifetime = host.Services.GetRequiredService<IHostApplicationLifetime>();
+                using var stoppedRegistration = applicationLifetime.ApplicationStopped
+                    .Register(() =>
+                        OnApplicationStopped(applicationLifetime, host.Services.GetServices<IHostedService>()));
 
-            await host.RunAsync(token);
-            await stoppedRegistration.DisposeAsync();
+                await host.StartAsync(token);
+                await host.WaitForShutdownAsync(token);
+            }
+            finally
+            {
+                if (host is IAsyncDisposable asyncDisposable)
+                    await asyncDisposable.DisposeAsync();
+                else
+                    host.Dispose();
+            }
         }
         catch (Exception ex)
         {
             CrashReportHelper.HandleFatalException(ex);
         }
     }
-    
+
     private static void OnApplicationStopped(IHostApplicationLifetime applicationLifetime, IEnumerable<IHostedService> services)
     {
         var exceptions = new List<Exception>();
@@ -211,19 +222,19 @@ public static class Program
             if (backgroundTask == null) continue;
             var aggregateException = backgroundTask.Exception;
             if (aggregateException == null) continue;
-            
+
             if (applicationLifetime.ApplicationStopping.IsCancellationRequested
                 && backgroundTask.IsCanceled
                 && aggregateException.InnerExceptions.All(e => e is TaskCanceledException))
             {
                 continue;
             }
-            
+
             exceptions.AddRange(aggregateException.InnerExceptions);
         }
-        
+
         if (exceptions.Count == 0) return;
-        
+
         var exception = exceptions.Count == 1 ? exceptions[0] : new AggregateException(exceptions);
         CrashReportHelper.HandleFatalException(exception);
     }
@@ -253,8 +264,8 @@ public static class Program
         Metrics.ConfigureMeterAdapter(adapterOptions =>
         {
             // Disable a bunch of verbose / unnecessary default metrics
-            adapterOptions.InstrumentFilterPredicate = inst => 
-                inst.Name != "kestrel.active_connections" 
+            adapterOptions.InstrumentFilterPredicate = inst =>
+                inst.Name != "kestrel.active_connections"
                 && inst.Name != "http.server.active_requests"
                 && inst.Name != "kestrel.queued_connections"
                 && inst.Name != "http.server.request.duration"
@@ -268,7 +279,7 @@ public static class Program
     private static void DetectContentManager()
     {
         if (!OperatingSystem.IsWindows()) return;
-        
+
         try
         {
             var parentId = Process.GetCurrentProcess().ParentProcessId;

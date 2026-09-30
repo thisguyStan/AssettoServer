@@ -1,13 +1,12 @@
 ﻿using AssettoServer.Server.Plugin;
-using Autofac;
-using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace TimeDilationPlugin;
 
 public class TimeDilationModule : AssettoServerModule<TimeDilationConfiguration>
 {
-    protected override void Load(ContainerBuilder builder)
+    public override void ConfigureServices(IServiceCollection services)
     {
-        builder.RegisterType<TimeDilationPlugin>().AsSelf().As<IHostedService>().SingleInstance();
+        services.AddSingletonHostedService<TimeDilationPlugin>();
     }
 }
