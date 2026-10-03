@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using AssettoServer.Commands;
 using AssettoServer.Commands.Contexts;
@@ -30,6 +31,7 @@ using Autofac;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
@@ -58,7 +60,14 @@ public class Startup
         // Registration order == order in which hosted services are started
         builder.RegisterType<ACServer>().AsSelf().As<IHostedService>().SingleInstance();
         builder.RegisterType<SessionManager>().AsSelf().As<IHostedService>().SingleInstance();
-        builder.RegisterType<ACTcpServer>().AsSelf().As<IHostedService>().SingleInstance();
+        if (_configuration.Server.TcpPort == _configuration.Server.HttpPort)
+        {
+            builder.RegisterType<TcpHttpMultiplexer>().AsSelf().As<IHostedService>().SingleInstance();
+        }
+        else
+        {
+            builder.RegisterType<ACTcpServer>().AsSelf().As<IHostedService>().SingleInstance();
+        }
         builder.RegisterType<ACUdpServer>().AsSelf().As<IHostedService>().SingleInstance();
         builder.RegisterModule(new WeatherModule(_configuration));
         builder.RegisterModule(new AiModule(_configuration));
@@ -154,6 +163,17 @@ public class Startup
     // For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
     public void ConfigureServices(IServiceCollection services)
     {
+        if (_configuration.Server.TcpPort == _configuration.Server.HttpPort)
+        {
+            services.Configure<ForwardedHeadersOptions>(options =>
+            {
+                options.ForwardedHeaders = ForwardedHeaders.XForwardedFor;
+                options.KnownProxies.Clear();
+                options.KnownProxies.Add(IPAddress.Loopback);
+                options.ForwardLimit = 1;
+            });
+        }
+
         services.Configure<HostOptions>(options =>
         {
             options.ShutdownTimeout = TimeSpan.FromSeconds(5);
@@ -204,6 +224,11 @@ public class Startup
         if (env.IsDevelopment())
         {
             app.UseDeveloperExceptionPage();
+        }
+
+        if (_configuration.Server.TcpPort == _configuration.Server.HttpPort)
+        {
+            app.UseForwardedHeaders();
         }
 
         app.UseRouting();

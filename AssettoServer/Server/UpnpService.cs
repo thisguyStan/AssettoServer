@@ -27,9 +27,13 @@ public class UpnpService : IHostedService
         _mappings =
         [
             new Mapping(Protocol.Tcp, configuration.Server.TcpPort, configuration.Server.TcpPort, "AssettoServer"),
-            new Mapping(Protocol.Udp, configuration.Server.UdpPort, configuration.Server.UdpPort, "AssettoServer"),
-            new Mapping(Protocol.Tcp, configuration.Server.HttpPort, configuration.Server.HttpPort, "AssettoServer")
+            new Mapping(Protocol.Udp, configuration.Server.UdpPort, configuration.Server.UdpPort, "AssettoServer")
         ];
+        if (configuration.Server.HttpPort != configuration.Server.TcpPort)
+        {
+            _mappings.Add(new Mapping(Protocol.Tcp, configuration.Server.HttpPort, configuration.Server.HttpPort,
+                "AssettoServer"));
+        }
     }
 
     public async Task StartAsync(CancellationToken cancellationToken)
